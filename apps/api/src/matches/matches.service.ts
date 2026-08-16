@@ -51,10 +51,13 @@ export class MatchesService {
     const matchId = await this.prisma.$transaction(async (tx) => {
       const sessionId = await this.resolveSession(tx, userId, input);
 
-      const [partners, opponents] = await Promise.all([
-        this.players.resolveRefs(tx, userId, input.partners),
-        this.players.resolveRefs(tx, userId, input.opponents),
-      ]);
+      // Resolved one side at a time, not concurrently: both calls may create a player,
+      // and interleaving them on the same transaction races on the unique name
+      // constraint. Sequential resolution also means a name appearing on both sides is
+      // found the second time and caught by the overlap check below, rather than
+      // surfacing as a confusing duplicate-key conflict.
+      const partners = await this.players.resolveRefs(tx, userId, input.partners);
+      const opponents = await this.players.resolveRefs(tx, userId, input.opponents);
 
       const overlap = partners.playerIds.filter((id) => opponents.playerIds.includes(id));
       if (overlap.length > 0) {
@@ -144,10 +147,8 @@ export class MatchesService {
     this.assertValidMatch(input.games, scoring);
 
     await this.prisma.$transaction(async (tx) => {
-      const [partners, opponents] = await Promise.all([
-        this.players.resolveRefs(tx, userId, input.partners),
-        this.players.resolveRefs(tx, userId, input.opponents),
-      ]);
+      const partners = await this.players.resolveRefs(tx, userId, input.partners);
+      const opponents = await this.players.resolveRefs(tx, userId, input.opponents);
 
       const overlap = partners.playerIds.filter((playerId) => opponents.playerIds.includes(playerId));
       if (overlap.length > 0) {

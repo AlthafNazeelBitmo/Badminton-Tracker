@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
+  CSV_IMPORT_COLUMNS,
   CSV_REQUIRED_COLUMNS,
   DEFAULT_SCORING_RULES,
   DISCIPLINES,
@@ -207,7 +208,7 @@ export class ImportService {
     userId: string,
     input: ImportPreviewInput,
   ): Promise<{ rows: ImportPreviewRow[]; issues: ImportIssue[] }> {
-    const { headers, records } = parseCsvRecords(input.csv);
+    const { headers, records } = parseCsvRecords(input.csv, CSV_IMPORT_COLUMNS);
     const fileIssues: ImportIssue[] = [];
 
     if (headers.length === 0) {

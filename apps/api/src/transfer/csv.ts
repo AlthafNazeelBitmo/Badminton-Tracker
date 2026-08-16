@@ -80,8 +80,21 @@ export function parseCsv(input: string): string[][] {
   return rows;
 }
 
-/** Parses a CSV with a header row into records keyed by lower-cased column name. */
-export function parseCsvRecords(input: string): {
+/**
+ * Parses a CSV with a header row into keyed records.
+ *
+ * Headers are matched case- and separator-insensitively against `canonicalColumns`, so
+ * a spreadsheet saying `Date`, `DURATION MINUTES` or `duration_minutes` all resolve to
+ * the canonical `durationMinutes` key. Canonicalising here — rather than lower-casing
+ * and hoping the reader agrees — is what stops a column from being silently ignored
+ * because the caller looked it up under a different spelling.
+ *
+ * Unrecognised headers are kept under their lower-cased name and simply unused.
+ */
+export function parseCsvRecords(
+  input: string,
+  canonicalColumns: readonly string[] = [],
+): {
   headers: string[];
   records: Array<Record<string, string>>;
 } {
@@ -89,7 +102,14 @@ export function parseCsvRecords(input: string): {
   const headerRow = rows[0];
   if (!headerRow) return { headers: [], records: [] };
 
-  const headers = headerRow.map((header) => header.trim().toLowerCase());
+  const canonicalByKey = new Map(
+    canonicalColumns.map((column) => [normaliseHeader(column), column]),
+  );
+
+  const headers = headerRow.map((header) => {
+    const key = normaliseHeader(header);
+    return canonicalByKey.get(key) ?? header.trim().toLowerCase();
+  });
 
   const records = rows.slice(1).map((row) => {
     const record: Record<string, string> = {};
@@ -100,6 +120,11 @@ export function parseCsvRecords(input: string): {
   });
 
   return { headers, records };
+}
+
+/** Reduces a header to a comparison key: lower-cased, stripped of spaces and separators. */
+function normaliseHeader(header: string): string {
+  return header.trim().toLowerCase().replace(/[\s_-]+/g, '');
 }
 
 /**

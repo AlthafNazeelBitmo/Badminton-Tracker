@@ -33,9 +33,15 @@ export const CSV_REQUIRED_COLUMNS: readonly CsvImportColumn[] = [
   'game1',
 ];
 
+/**
+ * The downloadable template. Every row carries one value per column — including the
+ * empty game columns — because a short row silently shifts every later value into the
+ * wrong field, which is exactly the kind of import corruption this format exists to
+ * prevent. A test asserts that the importer accepts this template unchanged.
+ */
 export const CSV_TEMPLATE = [
   CSV_IMPORT_COLUMNS.join(','),
-  '2026-08-01,Riverside Sports Hall,CASUAL,SINGLES,,John Carter,,21-18,19-21,21-16,42,3,Slow start then found my length',
+  '2026-08-01,Riverside Sports Hall,CASUAL,SINGLES,,John Carter,,21-18,19-21,21-16,,,42,3,Slow start then found my length',
   '2026-08-03,Riverside Sports Hall,COMPETITIVE,DOUBLES,Ahmed Rahim,John Carter,Priya Nair,21-15,21-19,,,,35,4,',
 ].join('\n');
 
