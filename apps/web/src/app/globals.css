@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens.
+ *
+ * Both themes are *selected*, not derived: the dark values are steps chosen for the
+ * dark surface and validated against it, not an automatic inversion of the light ones.
+ * The chart series colours live here alongside the UI colours so a chart can never
+ * drift away from the interface around it.
+ *
+ * The categorical series order is fixed. A chart never cycles hues to fit more series:
+ * past three it folds the tail into "Other" or uses small multiples.
+ */
+
+:root {
+  color-scheme: light;
+
+  --surface-0: #f4f4f1;
+  --surface-1: #fcfcfb;
+  --surface-2: #ffffff;
+
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #6f6e69;
+
+  --border: #e1e0d9;
+  --border-strong: #c3c2b7;
+
+  --accent: #2a78d6;
+  --accent-soft: #e8f0fc;
+  --accent-ink: #ffffff;
+
+  /* Status colours are reserved: never reused as a series hue. */
+  --status-good: #006300;
+  --status-warning: #8a5a00;
+  --status-critical: #b4302f;
+
+  /* Categorical series, fixed order: blue, orange, aqua. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+
+  /* Diverging pair for win/loss polarity, with a neutral midpoint. */
+  --diverge-positive: #2a78d6;
+  --diverge-negative: #e34948;
+  --diverge-neutral: #e1e0d9;
+
+  /* Sequential blue ramp for the activity heatmap, light to dark. */
+  --seq-0: #eeeeea;
+  --seq-1: #cde2fb;
+  --seq-2: #9ec5f4;
+  --seq-3: #5598e7;
+  --seq-4: #2a78d6;
+  --seq-5: #184f95;
+
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --surface-0: #0d0d0d;
+  --surface-1: #1a1a19;
+  --surface-2: #232322;
+
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+
+  --border: #2c2c2a;
+  --border-strong: #383835;
+
+  --accent: #3987e5;
+  --accent-soft: #16283f;
+  --accent-ink: #ffffff;
+
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-critical: #e66767;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+
+  --diverge-positive: #3987e5;
+  --diverge-negative: #e66767;
+  --diverge-neutral: #383835;
+
+  --seq-0: #232322;
+  --seq-1: #104281;
+  --seq-2: #184f95;
+  --seq-3: #256abf;
+  --seq-4: #3987e5;
+  --seq-5: #86b6ef;
+
+  --grid: #2c2c2a;
+  --axis: #383835;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--surface-0);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* A visible, consistent focus ring everywhere — keyboard users need to see where
+     they are, and browsers' defaults disappear against several of our surfaces. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Columns of figures must align vertically; standalone numbers should not be
+     forced into tabular figures, which look mechanical at hero sizes. */
+  th,
+  td,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-surface-raised;
+  }
+
+  .card-pad {
+    @apply p-4 sm:p-5;
+  }
+
+  /* Skip link: present for keyboard users, out of the way for everyone else. */
+  .skip-link {
+    @apply absolute left-4 top-4 z-50 -translate-y-24 rounded bg-accent px-4 py-2 text-accent-ink transition-transform focus:translate-y-0;
+  }
+}
+
+/* Recharts draws an inline SVG; these keep its chrome on our tokens rather than its
+   own defaults, in both themes. */
+.recharts-cartesian-grid line {
+  stroke: var(--grid);
+}
+
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line {
+  stroke: var(--axis);
+}
+
+.recharts-text {
+  fill: var(--text-muted);
+}
+
+.recharts-surface {
+  overflow: visible;
+}

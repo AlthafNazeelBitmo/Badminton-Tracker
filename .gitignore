@@ -27,3 +27,7 @@ playwright-report/
 test-results/
 blob-report/
 .playwright/
+
+# Playwright artefacts
+apps/web/test-results/
+apps/web/playwright-report/
