@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // The root tsconfig also covers `prisma/` and `test/` so they are type-checked, but
+    // only `src` is compiled — otherwise the output nests under `dist/src`.
+    "rootDir": "src",
+    // Kept inside `dist` so Nest's `deleteOutDir` removes it along with the output. If
+    // it lived outside, a wiped `dist` plus a surviving cache would emit only the files
+    // that changed since the last build, producing a broken bundle.
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "**/*.test.ts", "**/*.spec.ts"]
+}

@@ -1,0 +1,566 @@
+// Badminton performance platform — PostgreSQL schema.
+//
+// Design principles (see docs/database.md for the full rationale):
+//
+//  1. Raw match data is the source of truth. Games hold the scores; everything
+//     analytical is derived from them and can be recomputed at any time.
+//  2. Every user-owned row carries `userId`. The platform is single-tenant in
+//     practice today and multi-tenant by construction, so growing from one user
+//     to many needs no schema rewrite.
+//  3. People are modelled once. A `Player` is a person in a user's address book;
+//     whether they were an opponent or a partner is a property of the match via
+//     `MatchParticipant.side`, never of the person.
+//  4. The user's side of a match is always `HOME`. That invariant keeps every
+//     analytics query symmetrical.
+//  5. A small number of derived columns are stored on `Match` purely so the match
+//     list can be filtered and sorted in the database. They are written in the
+//     same transaction as the games and rebuildable with `npm run recompute`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Discipline {
+  SINGLES
+  DOUBLES
+  MIXED_DOUBLES
+}
+
+enum SessionType {
+  TRAINING
+  CASUAL
+  COMPETITIVE
+  TOURNAMENT
+  COACHING
+  OTHER
+}
+
+enum MatchResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+enum MatchSide {
+  HOME
+  AWAY
+}
+
+enum PlayerRelationship {
+  SELF
+  FRIEND
+  REGULAR_OPPONENT
+  REGULAR_PARTNER
+  COACH
+  OTHER
+}
+
+enum DominantHand {
+  RIGHT
+  LEFT
+  AMBIDEXTROUS
+  UNKNOWN
+}
+
+enum PlayingLevel {
+  BEGINNER
+  IMPROVER
+  INTERMEDIATE
+  ADVANCED
+  COMPETITIVE
+  ELITE
+}
+
+enum PlayingStyle {
+  ATTACKING
+  DEFENSIVE
+  ALL_ROUND
+  DECEPTIVE
+  FAST_FLAT
+  UNKNOWN
+}
+
+enum PerformanceTag {
+  STRONG_DEFENCE
+  STRONG_ATTACK
+  GOOD_NET_PLAY
+  GOOD_SMASH
+  GREAT_TEAMWORK
+  POOR_SERVE
+  POOR_RETURN
+  POOR_POSITIONING
+  UNFORCED_ERRORS
+  COMMUNICATION_ISSUES
+  FATIGUE
+  NERVOUS
+}
+
+enum GoalMetric {
+  MATCHES_PLAYED
+  MATCHES_WON
+  SESSIONS_PLAYED
+  WIN_RATE
+  GAME_WIN_RATE
+  POINT_DIFFERENTIAL
+  WIN_STREAK
+  PLAYING_MINUTES
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  MISSED
+  ARCHIVED
+}
+
+enum Visibility {
+  PRIVATE
+  FRIENDS
+  PUBLIC
+}
+
+enum NotificationType {
+  STREAK
+  MILESTONE
+  GOAL_PROGRESS
+  GOAL_DEADLINE
+  INACTIVITY
+  ACHIEVEMENT
+  SYSTEM
+}
+
+enum TokenPurpose {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          UserRole  @default(USER)
+  emailVerified Boolean   @default(false)
+  timeZone      String    @default("UTC")
+  locale        String    @default("en-GB")
+  lastLoginAt   DateTime?
+  /// Set when an account is deactivated; retained rather than deleted so
+  /// historical matches involving this user stay intact.
+  disabledAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile          PlayerProfile?
+  refreshTokens    RefreshToken[]
+  oneTimeTokens    OneTimeToken[]
+  players          Player[]
+  venues           Venue[]
+  sessions         Session[]
+  matches          Match[]
+  goals            Goal[]
+  achievements     UserAchievement[]
+  notifications    Notification[]
+  ratingEvents     RatingEvent[]
+  auditLogs        AuditLog[]
+
+  @@index([disabledAt])
+  @@map("users")
+}
+
+model PlayerProfile {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @unique @db.Uuid
+  dateOfBirth         DateTime?     @db.Date
+  playingLevel        PlayingLevel  @default(INTERMEDIATE)
+  preferredDiscipline Discipline?
+  dominantHand        DominantHand  @default(UNKNOWN)
+  playingStyle        PlayingStyle  @default(UNKNOWN)
+  preferredRacket     String?
+  preferredStrings    String?
+  avatarUrl           String?
+  notes               String?
+
+  /// Default scoring format applied to new matches when none is supplied.
+  defaultPointsToWin Int @default(21)
+  defaultWinBy       Int @default(2)
+  defaultMaxPoints   Int @default(30)
+  defaultBestOf      Int @default(3)
+
+  /// Performance data is private by default; sharing is opt-in.
+  defaultVisibility Visibility @default(PRIVATE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("player_profiles")
+}
+
+/// Rotating refresh tokens. Only a SHA-256 hash is stored, so a database leak
+/// does not hand over usable sessions.
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  /// Chains rotations together so reuse of a retired token can be detected.
+  familyId   String    @db.Uuid
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ipHash     String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// Single-use tokens for password reset and email verification.
+model OneTimeToken {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  tokenHash String       @unique
+  purpose   TokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+  @@map("one_time_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Address book
+// ---------------------------------------------------------------------------
+
+model Player {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  name String
+  /// Case-folded name used for the uniqueness constraint and for resolving a
+  /// typed name during quick entry, so "john carter" finds "John Carter".
+  normalizedName String
+  nickname       String?
+
+  relationship PlayerRelationship @default(OTHER)
+  playingLevel PlayingLevel?
+  dominantHand DominantHand       @default(UNKNOWN)
+  playingStyle PlayingStyle       @default(UNKNOWN)
+  avatarUrl    String?
+  notes        String?
+
+  /// True for the row representing the owning user themselves.
+  isSelf Boolean @default(false)
+
+  /// Set when this contact is also a user of the platform. Unused in v1; present
+  /// so friends, shared matches and club features do not need a data migration.
+  linkedUserId String? @db.Uuid
+
+  /// Estimated rating, refreshed by the rating replay. Never authoritative:
+  /// it is a cache of a value derived from matches.
+  rating          Float @default(1200)
+  ratingDeviation Float @default(350)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  participants MatchParticipant[]
+
+  @@unique([userId, normalizedName])
+  @@index([userId, relationship])
+  @@index([userId, isSelf])
+  @@index([linkedUserId])
+  @@map("players")
+}
+
+model Venue {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  name           String
+  normalizedName String
+  location       String?
+  city           String?
+  country        String? @db.Char(2)
+  isIndoor       Boolean @default(true)
+  courtCount     Int?
+  notes          String?
+  isFavourite    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@unique([userId, normalizedName])
+  @@index([userId, isFavourite])
+  @@map("venues")
+}
+
+// ---------------------------------------------------------------------------
+// Play
+// ---------------------------------------------------------------------------
+
+/// One visit to a court. Matches hang off a session so that per-session analysis
+/// (fatigue, perfect sessions, session win rate) is a simple grouping.
+model Session {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  /// Calendar date of play, with no time component, so "sessions per week" is
+  /// independent of the clock. Wall-clock times live in startedAt/endedAt.
+  date        DateTime    @db.Date
+  sessionType SessionType @default(CASUAL)
+  venueId     String?     @db.Uuid
+  startedAt   DateTime?
+  endedAt     DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venue   Venue?  @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  matches Match[]
+
+  @@index([userId, date(sort: Desc)])
+  @@index([userId, venueId])
+  @@index([userId, sessionType])
+  @@map("sessions")
+}
+
+model Match {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @db.Uuid
+  sessionId String @db.Uuid
+
+  playedAt        DateTime
+  /// 1-based position within the session, used for the fatigue analysis.
+  orderInSession  Int
+  discipline      Discipline
+  durationSeconds Int?
+
+  /// The scoring format this match was played under. Stored per match so that
+  /// changing your default format never rewrites history.
+  pointsToWin Int @default(21)
+  winBy       Int @default(2)
+  maxPoints   Int @default(30)
+  bestOf      Int @default(3)
+
+  /// Optional subjective self-assessment, 1–5.
+  difficulty  Int?
+  energyLevel Int?
+  confidence  Int?
+  feeling     Int?
+
+  notes String?
+
+  // -- Derived columns -----------------------------------------------------
+  // Written from the games in the same transaction, never supplied by clients.
+  // They exist so the match list can filter by result and sort by margin in the
+  // database instead of loading every game. `npm run recompute` rebuilds them.
+  result          MatchResult
+  gamesWon        Int
+  gamesLost       Int
+  pointsScored    Int
+  pointsConceded  Int
+  pointDifferential Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session      Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  games        Game[]
+  participants MatchParticipant[]
+  tags         MatchTag[]
+  ratingEvents RatingEvent[]
+
+  @@unique([sessionId, orderInSession])
+  @@index([userId, playedAt(sort: Desc)])
+  @@index([userId, discipline, playedAt(sort: Desc)])
+  @@index([userId, result])
+  @@index([sessionId])
+  @@map("matches")
+}
+
+/// Who played, and on which side. `HOME` is always the owning user's side.
+model MatchParticipant {
+  id       String    @id @default(uuid()) @db.Uuid
+  matchId  String    @db.Uuid
+  playerId String    @db.Uuid
+  side     MatchSide
+  /// Denormalised copy of `Player.isSelf` so "matches against player X" needs no
+  /// second join to exclude the user's own row.
+  isSelf   Boolean   @default(false)
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@index([playerId, side])
+  @@index([matchId, side])
+  @@map("match_participants")
+}
+
+/// One game within a match. Scores are always from the owning user's point of
+/// view: `myScore` is the HOME side's score.
+model Game {
+  id             String @id @default(uuid()) @db.Uuid
+  matchId        String @db.Uuid
+  gameNumber     Int
+  myScore        Int
+  opponentScore  Int
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, gameNumber])
+  @@index([matchId])
+  @@map("games")
+}
+
+model MatchTag {
+  matchId String         @db.Uuid
+  tag     PerformanceTag
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@id([matchId, tag])
+  @@index([tag])
+  @@map("match_tags")
+}
+
+// ---------------------------------------------------------------------------
+// Progress
+// ---------------------------------------------------------------------------
+
+model Goal {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  title       String
+  metric      GoalMetric
+  targetValue Float
+  discipline  Discipline?
+  startsOn    DateTime    @db.Date
+  deadline    DateTime?   @db.Date
+  status      GoalStatus  @default(ACTIVE)
+  achievedAt  DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, deadline])
+  @@map("goals")
+}
+
+/// Unlocked badges. The catalogue itself lives in code (`@badminton/contracts`)
+/// so adding a badge is a deploy, not a migration; only the unlock is persisted.
+model UserAchievement {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  achievementCode String
+  unlockedAt      DateTime @default(now())
+  /// Counter value at the moment of unlocking, kept for the activity feed.
+  valueAtUnlock   Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementCode])
+  @@index([userId, unlockedAt])
+  @@map("user_achievements")
+}
+
+/// Rating history. Rebuilt wholesale by the rating replay whenever matches
+/// change, so it is a projection of match data rather than a second source of truth.
+model RatingEvent {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @db.Uuid
+  matchId      String     @db.Uuid
+  discipline   Discipline
+  playedAt     DateTime
+  ratingBefore Float
+  ratingAfter  Float
+  delta        Float
+  opponentRating Float
+  kFactor      Float
+  result       MatchResult
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId])
+  @@index([userId, playedAt])
+  @@map("rating_events")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  title     String
+  body      String
+  /// Stable key preventing the same notification firing twice.
+  dedupeKey String
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+/// Append-only record of security-relevant actions.
+model AuditLog {
+  id       String   @id @default(uuid()) @db.Uuid
+  /// Nullable so failed logins for unknown emails can still be recorded.
+  userId   String?  @db.Uuid
+  action   String
+  entity   String?
+  entityId String?
+  /// Hashed, never the raw address, so the log is useful without being personal data.
+  ipHash    String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}

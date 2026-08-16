@@ -106,6 +106,9 @@ export interface ImportPreviewRow {
   partnerNames: string[];
   opponentNames: string[];
   games: Array<{ myScore: number; opponentScore: number }>;
+  durationMinutes: number | null;
+  difficulty: number | null;
+  notes: string | null;
   result: 'WIN' | 'LOSS' | 'DRAW' | null;
   issues: ImportIssue[];
   /** Players that do not yet exist and would be created on commit. */
