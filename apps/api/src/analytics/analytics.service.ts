@@ -86,9 +86,7 @@ export class AnalyticsService {
       matches.map((match) => match.venueId).filter((id): id is string => id !== null),
     );
 
-    const ordered = [...matches].sort(
-      (a, b) => a.playedAt.getTime() - b.playedAt.getTime(),
-    );
+    const ordered = [...matches].sort((a, b) => a.playedAt.getTime() - b.playedAt.getTime());
 
     return {
       stats: aggregate(matches),
@@ -132,10 +130,7 @@ export class AnalyticsService {
 
     return [...groups.entries()]
       .map(([playerId, group]) =>
-        buildBreakdown(
-          players.get(playerId) ?? unknownPlayer(playerId),
-          group,
-        ),
+        buildBreakdown(players.get(playerId) ?? unknownPlayer(playerId), group),
       )
       .sort(byMatchesThenWinRate);
   }
@@ -230,10 +225,7 @@ export class AnalyticsService {
     const range = this.loader.resolveRange(filter, now);
     const matches = await this.loader.loadWhere(this.loader.buildWhere(userId, filter, range));
 
-    const from =
-      range.from ??
-      matches[0]?.playedAt ??
-      new Date(now.getTime() - 365 * 86_400_000);
+    const from = range.from ?? matches[0]?.playedAt ?? new Date(now.getTime() - 365 * 86_400_000);
 
     return buildHeatmap(matches, from, range.to ?? now, filter.timeZone);
   }
@@ -279,7 +271,12 @@ export class AnalyticsService {
       this.prisma.player.findMany({
         where: { userId, isSelf: false, OR: [{ name: contains }, { nickname: contains }] },
         take: 5,
-        select: { id: true, name: true, relationship: true, _count: { select: { participants: true } } },
+        select: {
+          id: true,
+          name: true,
+          relationship: true,
+          _count: { select: { participants: true } },
+        },
       }),
       this.prisma.venue.findMany({
         where: { userId, OR: [{ name: contains }, { city: contains }] },
@@ -301,10 +298,7 @@ export class AnalyticsService {
       this.prisma.match.findMany({
         where: {
           userId,
-          OR: [
-            { notes: contains },
-            { participants: { some: { player: { name: contains } } } },
-          ],
+          OR: [{ notes: contains }, { participants: { some: { player: { name: contains } } } }],
         },
         take: 5,
         orderBy: { playedAt: 'desc' },
@@ -330,7 +324,10 @@ export class AnalyticsService {
       venues: venues.map((venue) => ({
         id: venue.id,
         name: venue.name,
-        subtitle: [venue.city, `${venue._count.sessions} session${venue._count.sessions === 1 ? '' : 's'}`]
+        subtitle: [
+          venue.city,
+          `${venue._count.sessions} session${venue._count.sessions === 1 ? '' : 's'}`,
+        ]
           .filter(Boolean)
           .join(' · '),
       })),
@@ -354,7 +351,18 @@ export class AnalyticsService {
   private async playerSubjects(
     userId: string,
     ids: string[],
-  ): Promise<Map<string, { id: string; name: string; nickname: string | null; avatarUrl: string | null; rating: number }>> {
+  ): Promise<
+    Map<
+      string,
+      {
+        id: string;
+        name: string;
+        nickname: string | null;
+        avatarUrl: string | null;
+        rating: number;
+      }
+    >
+  > {
     if (ids.length === 0) return new Map();
 
     const rows = await this.prisma.player.findMany({

@@ -168,7 +168,10 @@ export class AuthService {
     return { user: toAuthenticatedUser(user), tokens };
   }
 
-  async refresh(refreshToken: string, meta: RequestMeta): Promise<IssuedTokens & { user: AuthenticatedUser }> {
+  async refresh(
+    refreshToken: string,
+    meta: RequestMeta,
+  ): Promise<IssuedTokens & { user: AuthenticatedUser }> {
     const rotated = await this.tokens.rotateRefreshToken(refreshToken, meta);
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: rotated.userId } });
 

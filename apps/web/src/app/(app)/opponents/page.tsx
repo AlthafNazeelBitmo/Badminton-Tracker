@@ -7,7 +7,15 @@ import { useFilterState, useOpponents, usePartners } from '@/lib/hooks';
 import { EM_DASH, formatShortDate, percent, signed } from '@/lib/format';
 import { FilterBar } from '@/components/filter-bar';
 import { RankedBars } from '@/components/charts';
-import { Card, CardHeader, EmptyState, ErrorState, PageHeader, Skeleton, cx } from '@/components/ui';
+import {
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Skeleton,
+  cx,
+} from '@/components/ui';
 import { StatsTable } from '@/components/stats-table';
 
 /**
@@ -128,7 +136,9 @@ export default function OpponentsPage() {
             <CardHeader title="Full record" />
             <div className="overflow-x-auto p-4 sm:p-5">
               <StatsTable
-                caption={tab === 'opponents' ? 'Record against each opponent' : 'Record with each partner'}
+                caption={
+                  tab === 'opponents' ? 'Record against each opponent' : 'Record with each partner'
+                }
                 columns={[
                   { key: 'name', header: tab === 'opponents' ? 'Opponent' : 'Partner' },
                   { key: 'matches', header: 'Played', align: 'right' },

@@ -13,9 +13,7 @@ describe('consistencyScore', () => {
   });
 
   it('scores identical margins as perfectly consistent', () => {
-    const matches = Array.from({ length: 3 }, () =>
-      makeMatch({ games: games('21-18', '21-18') }),
-    );
+    const matches = Array.from({ length: 3 }, () => makeMatch({ games: games('21-18', '21-18') }));
     const result = consistencyScore(matches);
     expect(result.standardDeviation).toBe(0);
     expect(result.score).toBe(100);
@@ -156,7 +154,10 @@ describe('buildTrend', () => {
     const trend = buildTrend(
       [
         makeMatch({ playedAt: new Date('2026-01-10T12:00:00Z'), games: games('10-21', '10-21') }),
-        makeMatch({ playedAt: new Date('2026-02-10T12:00:00Z'), games: games('21-10', '10-21', '21-15') }),
+        makeMatch({
+          playedAt: new Date('2026-02-10T12:00:00Z'),
+          games: games('21-10', '10-21', '21-15'),
+        }),
         makeMatch({ playedAt: new Date('2026-03-10T12:00:00Z'), games: games('21-10', '21-10') }),
       ],
       'MONTH',

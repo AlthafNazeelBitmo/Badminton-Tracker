@@ -84,7 +84,10 @@ export default function RecordMatchPage() {
     () =>
       games
         .filter((game) => game.myScore !== '' && game.opponentScore !== '')
-        .map((game) => ({ myScore: Number(game.myScore), opponentScore: Number(game.opponentScore) })),
+        .map((game) => ({
+          myScore: Number(game.myScore),
+          opponentScore: Number(game.opponentScore),
+        })),
     [games],
   );
 
@@ -373,8 +376,8 @@ export default function RecordMatchPage() {
                   })}
                 </div>
                 <p className="mt-2 text-xs text-ink-muted">
-                  Tags are optional. Later they show which themes tend to accompany wins and
-                  losses — an association, not a cause.
+                  Tags are optional. Later they show which themes tend to accompany wins and losses
+                  — an association, not a cause.
                 </p>
               </fieldset>
 

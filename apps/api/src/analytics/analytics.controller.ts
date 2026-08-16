@@ -55,7 +55,8 @@ export class AnalyticsController {
   trend(
     @CurrentUser('id') userId: string,
     @Query(zodQuery(analyticsFilterSchema)) filter: AnalyticsFilter,
-    @Query(zodQuery(granularityQuerySchema)) query: { granularity: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' },
+    @Query(zodQuery(granularityQuerySchema))
+    query: { granularity: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' },
   ): Promise<TrendResponse> {
     return this.analytics.trend(userId, filter, query.granularity);
   }

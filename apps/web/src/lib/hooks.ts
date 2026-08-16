@@ -170,7 +170,14 @@ export const useAchievements = () => useSWR<AchievementView[]>('/achievements', 
 
 export const useNotifications = () =>
   useSWR<{
-    items: Array<{ id: string; type: string; title: string; body: string; read: boolean; createdAt: string }>;
+    items: Array<{
+      id: string;
+      type: string;
+      title: string;
+      body: string;
+      read: boolean;
+      createdAt: string;
+    }>;
     unreadCount: number;
   }>('/notifications', fetcher);
 
@@ -216,7 +223,11 @@ export function useAction<TArgs extends unknown[], TResult>(
         setError(
           caught instanceof ApiError
             ? caught
-            : new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection.'),
+            : new ApiError(
+                0,
+                'NETWORK_ERROR',
+                'Could not reach the server. Check your connection.',
+              ),
         );
         return null;
       } finally {

@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  ACHIEVEMENTS,
-  type AchievementCounters,
-  type AchievementView,
-} from '@badminton/contracts';
+import { ACHIEVEMENTS, type AchievementCounters, type AchievementView } from '@badminton/contracts';
 import { achievementCounters } from '@badminton/analytics';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchRecordLoader } from '../matches/match-record.loader';

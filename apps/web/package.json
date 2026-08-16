@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "start:standalone": "rm -rf .next/standalone/apps/web/.next/static && cp -r .next/static .next/standalone/apps/web/.next/static && node .next/standalone/apps/web/server.js"
   },
   "dependencies": {
     "@badminton/contracts": "*",

@@ -7,11 +7,7 @@
  * may well be different people, and merging them is not ours to decide.
  */
 export function normalizeName(value: string): string {
-  return value
-    .normalize('NFKC')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLocaleLowerCase('en');
+  return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en');
 }
 
 /** Title-cases a typed name for storage, leaving already-mixed-case input alone. */

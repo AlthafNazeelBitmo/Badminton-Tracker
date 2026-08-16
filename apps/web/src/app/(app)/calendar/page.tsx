@@ -6,7 +6,16 @@ import { SESSION_TYPE_LABELS } from '@badminton/contracts';
 import { buildQuery } from '@/lib/api';
 import { useSessions } from '@/lib/hooks';
 import { EM_DASH, duration, formatDate, percent, signed } from '@/lib/format';
-import { Card, CardHeader, EmptyState, ErrorState, PageHeader, ResultBadge, Skeleton, cx } from '@/components/ui';
+import {
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  ResultBadge,
+  Skeleton,
+  cx,
+} from '@/components/ui';
 import { useMatches } from '@/lib/hooks';
 
 /**
@@ -34,11 +43,21 @@ export default function CalendarPage() {
   );
 
   const dayMatches = useMatches(
-    selected ? buildQuery({ from: selected, to: `${selected}T23:59:59.999Z`, pageSize: 50, sort: 'OLDEST' }) : '?pageSize=1',
+    selected
+      ? buildQuery({
+          from: selected,
+          to: `${selected}T23:59:59.999Z`,
+          pageSize: 50,
+          sort: 'OLDEST',
+        })
+      : '?pageSize=1',
   );
 
   const byDate = useMemo(() => {
-    const map = new Map<string, typeof sessions.data extends undefined ? never : NonNullable<typeof sessions.data>['items']>();
+    const map = new Map<
+      string,
+      typeof sessions.data extends undefined ? never : NonNullable<typeof sessions.data>['items']
+    >();
     for (const session of sessions.data?.items ?? []) {
       const list = map.get(session.date) ?? [];
       list.push(session);
@@ -175,8 +194,8 @@ export default function CalendarPage() {
                       </p>
                       <p className="text-xs text-ink-secondary">
                         {session.stats.wins}W–{session.stats.losses}L ·{' '}
-                        {percent(session.stats.winRate)} ·{' '}
-                        {signed(session.stats.pointDifferential)} pts ·{' '}
+                        {percent(session.stats.winRate)} · {signed(session.stats.pointDifferential)}{' '}
+                        pts ·{' '}
                         {session.stats.durationMinutes
                           ? duration(session.stats.durationMinutes * 60)
                           : EM_DASH}
@@ -205,7 +224,9 @@ export default function CalendarPage() {
                           {match.opponents.map((person) => person.name).join(' & ')}
                         </span>
                         <span className="tabular shrink-0 text-xs text-ink-secondary">
-                          {match.games.map((game) => `${game.myScore}–${game.opponentScore}`).join(', ')}
+                          {match.games
+                            .map((game) => `${game.myScore}–${game.opponentScore}`)
+                            .join(', ')}
                         </span>
                       </Link>
                     </li>
@@ -228,9 +249,7 @@ function buildMonthGrid(year: number, month: number): Array<string | null> {
 
   const cells: Array<string | null> = Array.from({ length: leading }, () => null);
   for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push(
-      `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-    );
+    cells.push(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
   }
   while (cells.length % 7 !== 0) cells.push(null);
 

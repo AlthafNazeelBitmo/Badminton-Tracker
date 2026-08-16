@@ -108,7 +108,12 @@
   body {
     background-color: var(--surface-0);
     color: var(--text-primary);
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 

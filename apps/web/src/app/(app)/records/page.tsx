@@ -4,7 +4,15 @@ import Link from 'next/link';
 import { useAchievements, useFilterState, useRecords } from '@/lib/hooks';
 import { formatShortDate } from '@/lib/format';
 import { FilterBar } from '@/components/filter-bar';
-import { Card, CardHeader, EmptyState, ErrorState, Meter, PageHeader, Skeleton } from '@/components/ui';
+import {
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  Meter,
+  PageHeader,
+  Skeleton,
+} from '@/components/ui';
 
 /**
  * Personal records and achievements.
@@ -27,7 +35,10 @@ export default function RecordsPage() {
 
   return (
     <>
-      <PageHeader title="Records" description="Your bests, recomputed from the matches themselves." />
+      <PageHeader
+        title="Records"
+        description="Your bests, recomputed from the matches themselves."
+      />
 
       <FilterBar filter={filter} onChange={update} className="mb-4" showDimensions={false} />
 

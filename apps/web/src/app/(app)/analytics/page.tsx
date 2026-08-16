@@ -47,7 +47,8 @@ export default function AnalyticsPage() {
   const tags = useTagCorrelations(query);
   const ratings = useRatingHistory();
 
-  if (trend.error) return <ErrorState error={trend.error as Error} onRetry={() => void trend.mutate()} />;
+  if (trend.error)
+    return <ErrorState error={trend.error as Error} onRetry={() => void trend.mutate()} />;
 
   const points = trend.data?.points ?? [];
 
@@ -295,8 +296,8 @@ export default function AnalyticsPage() {
                     'Not enough sessions yet to say anything about how results move through a session.'}
                 </p>
                 <p className="mt-1 text-xs text-ink-muted">
-                  This describes scorelines, not physiology. Who you play later in a session is
-                  part of the picture too.
+                  This describes scorelines, not physiology. Who you play later in a session is part
+                  of the picture too.
                 </p>
               </>
             )}
@@ -343,7 +344,8 @@ export default function AnalyticsPage() {
                   label: PERFORMANCE_TAG_LABELS[entry.tag],
                   matches: entry.matches,
                   winRate: percent(entry.winRate),
-                  delta: entry.winRateDelta === null ? EM_DASH : `${signed(entry.winRateDelta, 1)} pts`,
+                  delta:
+                    entry.winRateDelta === null ? EM_DASH : `${signed(entry.winRateDelta, 1)} pts`,
                 }))}
               />
               <p className="mt-3 text-xs text-ink-muted">

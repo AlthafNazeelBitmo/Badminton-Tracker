@@ -14,8 +14,15 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 export const MATCH_RECORD_INCLUDE = {
   games: { orderBy: { gameNumber: 'asc' } },
-  participants: { select: { playerId: true, side: true, isSelf: true } },
-  tags: { select: { tag: true } },
+  participants: {
+    select: { playerId: true, side: true, isSelf: true },
+    // Without an explicit order PostgreSQL is free to return participants in any
+    // order, so a doubles pair could render as "John & Priya" on one request and
+    // "Priya & John" on the next. Alphabetical within each side is stable and reads
+    // sensibly; the user's own row sorts first on the home side.
+    orderBy: [{ isSelf: 'desc' }, { player: { name: 'asc' } }],
+  },
+  tags: { select: { tag: true }, orderBy: { tag: 'asc' } },
   session: {
     select: {
       id: true,

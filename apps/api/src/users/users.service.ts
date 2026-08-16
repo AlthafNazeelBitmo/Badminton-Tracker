@@ -129,7 +129,14 @@ export class UsersService {
     const [user, players, venues, sessions, matches, goals, achievements] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
-        select: { id: true, email: true, name: true, timeZone: true, createdAt: true, profile: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          timeZone: true,
+          createdAt: true,
+          profile: true,
+        },
       }),
       this.prisma.player.findMany({ where: { userId } }),
       this.prisma.venue.findMany({ where: { userId } }),

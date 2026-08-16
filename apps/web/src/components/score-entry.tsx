@@ -34,7 +34,9 @@ export function ScoreEntry({
 
   const needed = gamesRequiredToWin(scoring);
   const completed = games.filter((game) => game.myScore !== '' && game.opponentScore !== '');
-  const myGames = completed.filter((game) => Number(game.myScore) > Number(game.opponentScore)).length;
+  const myGames = completed.filter(
+    (game) => Number(game.myScore) > Number(game.opponentScore),
+  ).length;
   const theirGames = completed.length - myGames;
   const decided = myGames >= needed || theirGames >= needed;
 

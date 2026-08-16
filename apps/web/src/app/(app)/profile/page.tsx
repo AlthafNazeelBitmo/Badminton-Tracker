@@ -63,7 +63,11 @@ export default function ProfilePage() {
     setScoring(data.profile.defaultScoring);
   }, [data]);
 
-  const { run: save, isPending, error: saveError } = useAction(async () => {
+  const {
+    run: save,
+    isPending,
+    error: saveError,
+  } = useAction(async () => {
     await api.patch('/users/me', {
       name: form.name,
       timeZone: form.timeZone,
@@ -86,18 +90,21 @@ export default function ProfilePage() {
     await downloadFile('/users/me/export', 'badminton-account-export.json');
   });
 
-  const { run: changePassword, isPending: changingPassword, error: passwordError } = useAction(
-    async (current: string, next: string) => {
-      await api.post('/auth/change-password', { currentPassword: current, newPassword: next });
-      // Every session is revoked, so the user must sign in again.
-      window.location.href = '/login';
-    },
-  );
+  const {
+    run: changePassword,
+    isPending: changingPassword,
+    error: passwordError,
+  } = useAction(async (current: string, next: string) => {
+    await api.post('/auth/change-password', { currentPassword: current, newPassword: next });
+    // Every session is revoked, so the user must sign in again.
+    window.location.href = '/login';
+  });
 
   if (error) return <ErrorState error={error as Error} onRetry={() => void mutate()} />;
   if (isLoading || !data) return <Skeleton className="h-96" />;
 
-  const update = (key: string, value: unknown) => setForm((current) => ({ ...current, [key]: value }));
+  const update = (key: string, value: unknown) =>
+    setForm((current) => ({ ...current, [key]: value }));
 
   return (
     <>
@@ -122,7 +129,11 @@ export default function ProfilePage() {
                 />
               </Field>
 
-              <Field label="Email" htmlFor="email" hint={data.emailVerified ? 'Verified' : 'Not yet verified'}>
+              <Field
+                label="Email"
+                htmlFor="email"
+                hint={data.emailVerified ? 'Verified' : 'Not yet verified'}
+              >
                 <Input id="email" value={data.email} disabled readOnly />
               </Field>
 
@@ -324,12 +335,12 @@ export default function ProfilePage() {
             <CardHeader title="Privacy" />
             <div className="space-y-2 p-4 text-sm text-ink-secondary sm:p-5">
               <p>
-                Your matches, statistics and notes are private. Nothing is shared with anyone
-                else, and there is no public profile.
+                Your matches, statistics and notes are private. Nothing is shared with anyone else,
+                and there is no public profile.
               </p>
               <p className="text-xs text-ink-muted">
-                Sharing options (friends, public profiles, club leaderboards) are on the roadmap
-                and will be opt-in.
+                Sharing options (friends, public profiles, club leaderboards) are on the roadmap and
+                will be opt-in.
               </p>
               <Button onClick={() => void exportAccount()} loading={exporting}>
                 Download all my data

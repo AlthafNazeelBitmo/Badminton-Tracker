@@ -64,7 +64,11 @@ export function PersonPicker({
     (player) => player.name.toLowerCase() === query.trim().toLowerCase(),
   );
 
-  const { run: createPlayer, isPending, error } = useAction(async (name: string) => {
+  const {
+    run: createPlayer,
+    isPending,
+    error,
+  } = useAction(async (name: string) => {
     const created = await api.post<PlayerSummary>('/players', { name, relationship: 'OTHER' });
 
     setJustCreated((current) => [...current, created]);

@@ -124,7 +124,10 @@ export function parseCsvRecords(
 
 /** Reduces a header to a comparison key: lower-cased, stripped of spaces and separators. */
 function normaliseHeader(header: string): string {
-  return header.trim().toLowerCase().replace(/[\s_-]+/g, '');
+  return header
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
 }
 
 /**
@@ -134,7 +137,10 @@ function normaliseHeader(header: string): string {
  * that, a spreadsheet opens an exported "name" of `=1+1` as a live formula — the CSV
  * injection problem. The exported file stays readable and no longer executes.
  */
-export function toCsv(headers: readonly string[], rows: ReadonlyArray<ReadonlyArray<unknown>>): string {
+export function toCsv(
+  headers: readonly string[],
+  rows: ReadonlyArray<ReadonlyArray<unknown>>,
+): string {
   const lines = [headers.map(escapeCsvField).join(',')];
   for (const row of rows) {
     lines.push(row.map(escapeCsvField).join(','));

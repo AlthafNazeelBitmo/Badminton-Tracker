@@ -52,7 +52,14 @@ export default function PlayersPage() {
         }
       />
 
-      {adding ? <PlayerForm onSaved={() => { setAdding(false); void mutate(); }} /> : null}
+      {adding ? (
+        <PlayerForm
+          onSaved={() => {
+            setAdding(false);
+            void mutate();
+          }}
+        />
+      ) : null}
 
       {merging ? (
         <MergePanel
@@ -106,7 +113,11 @@ function PlayerRow({
   onMerge: () => void;
   onChanged: () => void;
 }) {
-  const { run: remove, isPending, error } = useAction(async () => {
+  const {
+    run: remove,
+    isPending,
+    error,
+  } = useAction(async () => {
     await api.delete(`/players/${player.id}`);
     onChanged();
   });
@@ -123,9 +134,7 @@ function PlayerRow({
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
           {player.name}
-          {player.relationship !== 'OTHER' ? (
-            <Badge>{titleCase(player.relationship)}</Badge>
-          ) : null}
+          {player.relationship !== 'OTHER' ? <Badge>{titleCase(player.relationship)}</Badge> : null}
         </p>
         <p className="mt-0.5 text-xs text-ink-muted">
           {player.matchesPlayed} match{player.matchesPlayed === 1 ? '' : 'es'}
@@ -203,7 +212,12 @@ function MergePanel({
           </Select>
         </Field>
 
-        <Button variant="primary" onClick={() => void run()} loading={isPending} disabled={!targetId}>
+        <Button
+          variant="primary"
+          onClick={() => void run()}
+          loading={isPending}
+          disabled={!targetId}
+        >
           Merge
         </Button>
         <Button variant="ghost" onClick={onCancel}>

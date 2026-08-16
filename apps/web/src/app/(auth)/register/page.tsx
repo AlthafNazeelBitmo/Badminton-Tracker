@@ -38,9 +38,7 @@ export default function RegisterPage() {
   return (
     <Card className="w-full max-w-sm p-6">
       <h1 className="text-lg font-semibold tracking-tight">Create your account</h1>
-      <p className="mt-1 text-sm text-ink-secondary">
-        Start recording matches in under a minute.
-      </p>
+      <p className="mt-1 text-sm text-ink-secondary">Start recording matches in under a minute.</p>
 
       <form
         className="mt-5 space-y-4"

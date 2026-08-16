@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import {
   CSV_IMPORT_COLUMNS,
   CSV_REQUIRED_COLUMNS,
@@ -228,7 +227,9 @@ export class ImportService {
     }
 
     const scoring = await this.defaultScoring(userId);
-    const existingKeys = input.skipDuplicates ? await this.existingMatchKeys(userId) : new Set<string>();
+    const existingKeys = input.skipDuplicates
+      ? await this.existingMatchKeys(userId)
+      : new Set<string>();
 
     const rows: ImportPreviewRow[] = [];
     const seenInFile = new Set<string>();
@@ -242,18 +243,27 @@ export class ImportService {
         issues.push({ rowNumber, column, code, message });
 
       const date = parseDate(record.date ?? '');
-      if (!date) add('date', 'INVALID_DATE', `"${record.date ?? ''}" is not a valid date (use YYYY-MM-DD).`);
+      if (!date)
+        add('date', 'INVALID_DATE', `"${record.date ?? ''}" is not a valid date (use YYYY-MM-DD).`);
 
       const discipline = parseEnum(record.discipline ?? '', DISCIPLINES);
       if (!discipline) {
-        add('discipline', 'INVALID_DISCIPLINE', `Discipline must be one of ${DISCIPLINES.join(', ')}.`);
+        add(
+          'discipline',
+          'INVALID_DISCIPLINE',
+          `Discipline must be one of ${DISCIPLINES.join(', ')}.`,
+        );
       }
 
       const sessionType = record.sessionType
         ? parseEnum(record.sessionType, SESSION_TYPES)
         : 'CASUAL';
       if (record.sessionType && !sessionType) {
-        add('sessionType', 'INVALID_SESSION_TYPE', `Session type must be one of ${SESSION_TYPES.join(', ')}.`);
+        add(
+          'sessionType',
+          'INVALID_SESSION_TYPE',
+          `Session type must be one of ${SESSION_TYPES.join(', ')}.`,
+        );
       }
 
       const opponentNames = [record.opponent1, record.opponent2]
@@ -303,7 +313,7 @@ export class ImportService {
         const check = validateMatchGames(games, scoring);
         for (const issue of check.issues) {
           add(
-            issue.gameIndex === undefined ? null : GAME_COLUMNS[issue.gameIndex] ?? null,
+            issue.gameIndex === undefined ? null : (GAME_COLUMNS[issue.gameIndex] ?? null),
             issue.code,
             issue.message,
           );
@@ -317,7 +327,11 @@ export class ImportService {
 
       const durationMinutes = parseOptionalNumber(record.durationMinutes, 0, 720);
       if (record.durationMinutes && durationMinutes === null) {
-        add('durationMinutes', 'INVALID_DURATION', 'Duration must be a whole number of minutes between 0 and 720.');
+        add(
+          'durationMinutes',
+          'INVALID_DURATION',
+          'Duration must be a whole number of minutes between 0 and 720.',
+        );
       }
 
       const difficulty = parseOptionalNumber(record.difficulty, 1, 5);
@@ -328,10 +342,7 @@ export class ImportService {
       const notes = (record.notes ?? '').trim().slice(0, 4000) || null;
 
       const derived = games.length > 0 ? deriveMatch({ games, scoring }) : null;
-      const key =
-        date && discipline
-          ? matchKey(date, opponentNames, games)
-          : null;
+      const key = date && discipline ? matchKey(date, opponentNames, games) : null;
 
       let status: ImportPreviewRow['status'] = issues.length > 0 ? 'INVALID' : 'READY';
       if (status === 'READY' && key) {
@@ -489,7 +500,10 @@ function parseDate(value: string): Date | null {
 }
 
 function parseEnum<T extends readonly string[]>(value: string, allowed: T): T[number] | null {
-  const normalised = value.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const normalised = value
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
   return (allowed as readonly string[]).includes(normalised) ? (normalised as T[number]) : null;
 }
 

@@ -19,7 +19,11 @@ import { NotFoundError, ValidationError } from '../common/errors';
 import { pageMeta, paginate } from '../common/pagination';
 import { PlayersService } from '../players/players.service';
 import { VenuesService } from '../venues/venues.service';
-import { MATCH_RECORD_INCLUDE, toMatchRecord, type MatchWithRelations } from './match-record.loader';
+import {
+  MATCH_RECORD_INCLUDE,
+  toMatchRecord,
+  type MatchWithRelations,
+} from './match-record.loader';
 import { RatingService } from '../analytics/rating.service';
 import { AchievementsService } from '../progress/achievements.service';
 
@@ -150,7 +154,9 @@ export class MatchesService {
       const partners = await this.players.resolveRefs(tx, userId, input.partners);
       const opponents = await this.players.resolveRefs(tx, userId, input.opponents);
 
-      const overlap = partners.playerIds.filter((playerId) => opponents.playerIds.includes(playerId));
+      const overlap = partners.playerIds.filter((playerId) =>
+        opponents.playerIds.includes(playerId),
+      );
       if (overlap.length > 0) {
         throw new ValidationError('A player cannot be on both sides of the same match.');
       }
@@ -347,10 +353,7 @@ export class MatchesService {
    * one per match. The names are small and heavily reused, so fetching the user's whole
    * address book once beats joining it onto every row.
    */
-  private async decorate(
-    userId: string,
-    rows: MatchWithRelations[],
-  ): Promise<MatchSummary[]> {
+  private async decorate(userId: string, rows: MatchWithRelations[]): Promise<MatchSummary[]> {
     if (rows.length === 0) return [];
 
     const playerIds = new Set(
@@ -392,7 +395,9 @@ export class MatchesService {
         feeling: row.feeling,
         notes: row.notes,
         tags: row.tags.map((tag) => tag.tag),
-        venue: row.session.venue ? { id: row.session.venue.id, name: row.session.venue.name } : null,
+        venue: row.session.venue
+          ? { id: row.session.venue.id, name: row.session.venue.name }
+          : null,
         partners: record.partnerIds.map((playerId) => view(playerId, 'HOME')),
         opponents: record.opponentIds.map((playerId) => view(playerId, 'AWAY')),
         games: row.games.map((game) => ({
@@ -429,7 +434,11 @@ export class MatchesService {
       if (!check.valid) {
         throw new ValidationError(
           'The scoring format is not valid.',
-          check.issues.map((issue) => ({ path: 'scoring', message: issue.message, code: issue.code })),
+          check.issues.map((issue) => ({
+            path: 'scoring',
+            message: issue.message,
+            code: issue.code,
+          })),
         );
       }
       return supplied;
@@ -453,7 +462,10 @@ export class MatchesService {
    * server is the authority, because a client check is a convenience and never a
    * guarantee.
    */
-  private assertValidMatch(games: Array<{ myScore: number; opponentScore: number }>, scoring: ScoringRules): void {
+  private assertValidMatch(
+    games: Array<{ myScore: number; opponentScore: number }>,
+    scoring: ScoringRules,
+  ): void {
     const result = validateMatchGames(games, scoring);
     if (result.valid) return;
 
@@ -495,7 +507,10 @@ export class MatchesService {
       venueId = (await this.venues.resolveByName(tx, userId, draft.venueName)).id;
     }
     if (venueId) {
-      const venue = await tx.venue.findFirst({ where: { id: venueId, userId }, select: { id: true } });
+      const venue = await tx.venue.findFirst({
+        where: { id: venueId, userId },
+        select: { id: true },
+      });
       if (!venue) throw new NotFoundError('Venue');
     }
 
@@ -536,7 +551,10 @@ function orderForSort(sort: ListMatchesQuery['sort']): Prisma.MatchOrderByWithRe
   }
 }
 
-async function nextOrderInSession(tx: Prisma.TransactionClient, sessionId: string): Promise<number> {
+async function nextOrderInSession(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+): Promise<number> {
   const last = await tx.match.findFirst({
     where: { sessionId },
     orderBy: { orderInSession: 'desc' },

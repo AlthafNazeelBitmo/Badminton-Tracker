@@ -79,8 +79,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return {
           status,
           code: typeof record.code === 'string' ? record.code : defaultCodeFor(status),
-          message:
-            typeof record.message === 'string' ? record.message : exception.message,
+          message: typeof record.message === 'string' ? record.message : exception.message,
           details: Array.isArray(record.details)
             ? (record.details as ApiErrorBody['details'])
             : undefined,

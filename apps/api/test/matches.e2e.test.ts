@@ -386,9 +386,7 @@ describe('listing and filtering', () => {
     const priya = await context.prisma.player.findFirstOrThrow({
       where: { userId: user.id, name: 'Priya Nair' },
     });
-    const response = await user.agent
-      .get(`/api/v1/matches?opponentId=${priya.id}`)
-      .expect(200);
+    const response = await user.agent.get(`/api/v1/matches?opponentId=${priya.id}`).expect(200);
     expect(response.body.items).toHaveLength(1);
     expect(response.body.items[0].discipline).toBe('DOUBLES');
   });

@@ -65,7 +65,6 @@ export class AuthController {
     // is exercisable end to end before a mail transport exists. It is never returned in
     // the response body, where a proxy or browser extension could capture it.
     if (this.config.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.info(
         `[dev] Email verification token for ${result.user.email}: ${result.verificationToken}`,
       );
@@ -150,7 +149,6 @@ export class AuthController {
     const token = await this.auth.requestPasswordReset(input.email, metaFrom(request));
 
     if (token && this.config.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.info(`[dev] Password reset token for ${input.email}: ${token}`);
     }
 
@@ -191,7 +189,6 @@ export class AuthController {
   async resendVerification(@CurrentUser('id') userId: string): Promise<{ message: string }> {
     const token = await this.auth.resendVerification(userId);
     if (token && this.config.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.info(`[dev] Email verification token: ${token}`);
     }
     return { message: 'If your address is unverified, a new link has been sent.' };

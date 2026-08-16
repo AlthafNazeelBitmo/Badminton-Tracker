@@ -116,10 +116,7 @@ describe('records and counters', () => {
 
   it('finds the highest scoring game and the largest winning margin', () => {
     const records = personalRecords(
-      [
-        makeMatch({ games: games('30-29', '21-19') }),
-        makeMatch({ games: games('21-2', '21-3') }),
-      ],
+      [makeMatch({ games: games('30-29', '21-19') }), makeMatch({ games: games('21-2', '21-3') })],
       context,
     );
 
@@ -147,7 +144,10 @@ describe('records and counters', () => {
     ];
     expect(countPerfectSessions(shortSession)).toBe(0);
 
-    const fullSession = [...shortSession, makeMatch({ sessionId: 'a', games: games('21-10', '21-10') })];
+    const fullSession = [
+      ...shortSession,
+      makeMatch({ sessionId: 'a', games: games('21-10', '21-10') }),
+    ];
     expect(countPerfectSessions(fullSession)).toBe(1);
   });
 
@@ -163,9 +163,24 @@ describe('records and counters', () => {
 
   it('produces achievement counters from raw matches', () => {
     const counters = achievementCounters([
-      makeMatch({ sessionId: 's1', venueId: 'v1', opponentIds: ['o1'], games: games('21-10', '21-10') }),
-      makeMatch({ sessionId: 's1', venueId: 'v1', opponentIds: ['o2'], games: games('18-21', '21-10', '21-10') }),
-      makeMatch({ sessionId: 's2', venueId: 'v2', opponentIds: ['o1'], games: games('10-21', '10-21') }),
+      makeMatch({
+        sessionId: 's1',
+        venueId: 'v1',
+        opponentIds: ['o1'],
+        games: games('21-10', '21-10'),
+      }),
+      makeMatch({
+        sessionId: 's1',
+        venueId: 'v1',
+        opponentIds: ['o2'],
+        games: games('18-21', '21-10', '21-10'),
+      }),
+      makeMatch({
+        sessionId: 's2',
+        venueId: 'v2',
+        opponentIds: ['o1'],
+        games: games('10-21', '10-21'),
+      }),
     ]);
 
     expect(counters.matchesPlayed).toBe(3);

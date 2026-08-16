@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { DISCIPLINE_LABELS, PERFORMANCE_TAG_LABELS, SESSION_TYPE_LABELS, describeRules } from '@badminton/contracts';
+import {
+  DISCIPLINE_LABELS,
+  PERFORMANCE_TAG_LABELS,
+  SESSION_TYPE_LABELS,
+  describeRules,
+} from '@badminton/contracts';
 import { api } from '@/lib/api';
 import { invalidateMatchData, useAction, useMatch } from '@/lib/hooks';
 import { duration, formatDate, formatDateTime, joinNames, signed } from '@/lib/format';
@@ -202,8 +207,12 @@ export default function MatchDetailPage() {
             <CardHeader title="Details" />
             <dl className="divide-y divide-line text-sm">
               <Row label="Session">
-                <Link href={`/calendar?date=${match.session.date}`} className="text-accent hover:underline">
-                  {formatDate(match.session.date)} · {SESSION_TYPE_LABELS[match.session.sessionType]}
+                <Link
+                  href={`/calendar?date=${match.session.date}`}
+                  className="text-accent hover:underline"
+                >
+                  {formatDate(match.session.date)} ·{' '}
+                  {SESSION_TYPE_LABELS[match.session.sessionType]}
                 </Link>
               </Row>
               <Row label="Match number">#{match.orderInSession} of the session</Row>
@@ -217,9 +226,7 @@ export default function MatchDetailPage() {
               {match.confidence ? <Row label="Confidence">{match.confidence} / 5</Row> : null}
               {match.ratingChange ? (
                 <Row label="Rating">
-                  <span
-                    className={match.ratingChange.delta >= 0 ? 'text-win' : 'text-loss'}
-                  >
+                  <span className={match.ratingChange.delta >= 0 ? 'text-win' : 'text-loss'}>
                     {match.ratingChange.before.toFixed(0)} → {match.ratingChange.after.toFixed(0)} (
                     {signed(match.ratingChange.delta, 1)})
                   </span>
@@ -243,8 +250,8 @@ export default function MatchDetailPage() {
             {confirmingDelete ? (
               <div className="space-y-3">
                 <p className="text-sm text-ink">
-                  Delete this match? Your statistics, records and rating are recomputed from
-                  what remains, so this changes them.
+                  Delete this match? Your statistics, records and rating are recomputed from what
+                  remains, so this changes them.
                 </p>
                 <div className="flex gap-2">
                   <Button variant="danger" onClick={() => void remove()} loading={deleting}>

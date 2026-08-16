@@ -41,9 +41,7 @@ function LoginForm() {
   return (
     <Card className="w-full max-w-sm p-6">
       <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-1 text-sm text-ink-secondary">
-        Pick up where your last session left off.
-      </p>
+      <p className="mt-1 text-sm text-ink-secondary">Pick up where your last session left off.</p>
 
       <form
         className="mt-5 space-y-4"
@@ -92,7 +90,10 @@ function LoginForm() {
 
       <p className="mt-5 text-center text-sm text-ink-secondary">
         No account yet?{' '}
-        <Link href="/register" className="font-medium text-accent underline-offset-2 hover:underline">
+        <Link
+          href="/register"
+          className="font-medium text-accent underline-offset-2 hover:underline"
+        >
           Create one
         </Link>
       </p>

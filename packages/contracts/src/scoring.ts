@@ -161,15 +161,13 @@ export function validateGameScore(
     return { valid: false, issues };
   }
   if (high < rules.pointsToWin) {
-    push(
-      'GAME_INCOMPLETE',
-      `The winning side must reach at least ${rules.pointsToWin} points.`,
-    );
+    push('GAME_INCOMPLETE', `The winning side must reach at least ${rules.pointsToWin} points.`);
     return { valid: false, issues };
   }
 
   const wonAtTarget = high === rules.pointsToWin && margin >= rules.winBy;
-  const wonAfterDeuce = high > rules.pointsToWin && high < rules.maxPoints && margin === rules.winBy;
+  const wonAfterDeuce =
+    high > rules.pointsToWin && high < rules.maxPoints && margin === rules.winBy;
   const wonAtCap = high === rules.maxPoints && margin >= 1 && margin <= rules.winBy;
 
   if (!wonAtTarget && !wonAfterDeuce && !wonAtCap) {

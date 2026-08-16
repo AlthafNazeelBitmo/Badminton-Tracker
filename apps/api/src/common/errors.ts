@@ -22,10 +22,7 @@ export class NotFoundError extends AppException {
 }
 
 export class ValidationError extends AppException {
-  constructor(
-    message: string,
-    details?: Array<{ path: string; message: string; code?: string }>,
-  ) {
+  constructor(message: string, details?: Array<{ path: string; message: string; code?: string }>) {
     super(HttpStatus.UNPROCESSABLE_ENTITY, 'VALIDATION_FAILED', message, details);
   }
 }

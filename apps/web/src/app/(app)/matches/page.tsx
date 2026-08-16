@@ -12,7 +12,16 @@ import {
 import { buildQuery } from '@/lib/api';
 import { useMatches } from '@/lib/hooks';
 import { duration, formatDate, joinNames, scoreline, signed } from '@/lib/format';
-import { Button, Card, EmptyState, ErrorState, PageHeader, ResultBadge, Skeleton, cx } from '@/components/ui';
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  ResultBadge,
+  Skeleton,
+  cx,
+} from '@/components/ui';
 
 type Sort = ListMatchesQuery['sort'];
 
@@ -69,7 +78,9 @@ export default function MatchesPage() {
       <PageHeader
         title="Matches"
         description={
-          data ? `${data.meta.totalItems} match${data.meta.totalItems === 1 ? '' : 'es'} recorded` : undefined
+          data
+            ? `${data.meta.totalItems} match${data.meta.totalItems === 1 ? '' : 'es'} recorded`
+            : undefined
         }
         action={
           <Link
@@ -163,7 +174,12 @@ export default function MatchesPage() {
           {grouped.map(([day, matches]) => (
             <section key={day}>
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {formatDate(day, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {formatDate(day, {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
               </h2>
               <Card className="divide-y divide-line">
                 {matches.map((match) => (

@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { DOMINANT_HANDS, DISCIPLINES, PLAYING_LEVELS, PLAYING_STYLES, USER_ROLES, VISIBILITIES } from './enums';
+import {
+  DOMINANT_HANDS,
+  DISCIPLINES,
+  PLAYING_LEVELS,
+  PLAYING_STYLES,
+  USER_ROLES,
+  VISIBILITIES,
+} from './enums';
 import { trimmedString } from './common';
 import { DEFAULT_SCORING_RULES } from './scoring';
 

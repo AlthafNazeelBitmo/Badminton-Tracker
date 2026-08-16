@@ -85,7 +85,12 @@ export class GoalsService {
       data: {
         title: input.title,
         targetValue: input.targetValue,
-        deadline: input.deadline === undefined ? undefined : input.deadline ? startOfUtcDay(input.deadline) : null,
+        deadline:
+          input.deadline === undefined
+            ? undefined
+            : input.deadline
+              ? startOfUtcDay(input.deadline)
+              : null,
         status: input.status,
         notes: input.notes === undefined ? undefined : input.notes,
       },
@@ -171,7 +176,11 @@ export class GoalsService {
           daysRemaining === null || daysRemaining <= 0 || met
             ? null
             : Math.round((remaining / daysRemaining) * 100) / 100,
-        achievedAt: goal.achievedAt ? goal.achievedAt.toISOString() : met ? now.toISOString() : null,
+        achievedAt: goal.achievedAt
+          ? goal.achievedAt.toISOString()
+          : met
+            ? now.toISOString()
+            : null,
         notes: goal.notes,
       });
     }

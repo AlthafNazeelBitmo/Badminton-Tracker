@@ -15,7 +15,6 @@ import {
   Badge,
   Button,
   Card,
-  CardHeader,
   EmptyState,
   ErrorState,
   Field,
@@ -49,7 +48,10 @@ export default function GoalsPage() {
         title="Goals"
         description="Set a target and watch it fill from the matches you record."
         action={
-          <Button variant={creating ? 'ghost' : 'primary'} onClick={() => setCreating((open) => !open)}>
+          <Button
+            variant={creating ? 'ghost' : 'primary'}
+            onClick={() => setCreating((open) => !open)}
+          >
             {creating ? 'Cancel' : 'New goal'}
           </Button>
         }
@@ -125,8 +127,7 @@ function GoalCard({ goal, onChanged }: { goal: GoalProgress; onChanged: () => vo
   const formatValue = (value: number) =>
     isPercentage ? `${value.toFixed(1)}%` : Math.round(value).toLocaleString();
 
-  const tone =
-    goal.status === 'ACHIEVED' ? 'win' : goal.status === 'MISSED' ? 'loss' : 'neutral';
+  const tone = goal.status === 'ACHIEVED' ? 'win' : goal.status === 'MISSED' ? 'loss' : 'neutral';
 
   return (
     <li>
@@ -173,9 +174,7 @@ function GoalCard({ goal, onChanged }: { goal: GoalProgress; onChanged: () => vo
                 ? ` · ${goal.daysRemaining} day${goal.daysRemaining === 1 ? '' : 's'} left`
                 : ' · deadline passed'
               : ''}
-            {goal.requiredDailyPace !== null
-              ? ` · needs ${goal.requiredDailyPace} per day`
-              : ''}
+            {goal.requiredDailyPace !== null ? ` · needs ${goal.requiredDailyPace} per day` : ''}
           </span>
           <Button variant="ghost" size="sm" onClick={() => void remove()} loading={isPending}>
             Delete

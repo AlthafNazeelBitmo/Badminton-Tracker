@@ -34,8 +34,7 @@ export function mean(values: readonly number[]): number | null {
 export function standardDeviation(values: readonly number[]): number | null {
   if (values.length < 2) return null;
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const variance =
-    values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
+  const variance = values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
   return round(Math.sqrt(variance), AVERAGE_DECIMALS);
 }
 

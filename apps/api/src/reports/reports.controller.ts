@@ -1,6 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { analyticsFilterSchema, type AnalyticsFilter, type PerformanceReport } from '@badminton/contracts';
+import {
+  analyticsFilterSchema,
+  type AnalyticsFilter,
+  type PerformanceReport,
+} from '@badminton/contracts';
 import { zodQuery } from '../common/zod-validation.pipe';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { ReportsService } from './reports.service';

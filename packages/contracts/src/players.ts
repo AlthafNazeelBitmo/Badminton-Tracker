@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  DOMINANT_HANDS,
-  PLAYER_RELATIONSHIPS,
-  PLAYING_LEVELS,
-  PLAYING_STYLES,
-} from './enums';
+import { DOMINANT_HANDS, PLAYER_RELATIONSHIPS, PLAYING_LEVELS, PLAYING_STYLES } from './enums';
 import { optionalNotes, paginationSchema, trimmedString, uuidSchema } from './common';
 
 /**

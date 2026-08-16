@@ -72,9 +72,28 @@ describe('overview', () => {
   });
 
   it('computes headline statistics from recorded matches', async () => {
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-03-08', games: [[15, 21], [17, 21]] });
-    await play(user, { date: '2026-03-15', games: [[21, 18], [18, 21], [21, 19]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-08',
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-15',
+      games: [
+        [21, 18],
+        [18, 21],
+        [21, 19],
+      ],
+    });
 
     const response = await user.agent.get(`/api/v1/analytics/overview?${ALL_TIME}`).expect(200);
     const stats = response.body.stats;
@@ -93,9 +112,27 @@ describe('overview', () => {
   });
 
   it('tracks the current streak', async () => {
-    await play(user, { date: '2026-03-01', games: [[15, 21], [17, 21]] });
-    await play(user, { date: '2026-03-02', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-03-03', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-02',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-03',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const response = await user.agent.get(`/api/v1/analytics/overview?${ALL_TIME}`).expect(200);
     expect(response.body.streaks.currentWinStreak).toBe(2);
@@ -104,8 +141,20 @@ describe('overview', () => {
 
   it('excludes another user’s matches entirely', async () => {
     const other = await registerUser(context);
-    await play(other, { date: '2026-03-01', games: [[21, 5], [21, 5]] });
-    await play(user, { date: '2026-03-01', games: [[15, 21], [17, 21]] });
+    await play(other, {
+      date: '2026-03-01',
+      games: [
+        [21, 5],
+        [21, 5],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
+    });
 
     const response = await user.agent.get(`/api/v1/analytics/overview?${ALL_TIME}`).expect(200);
     expect(response.body.stats.matches).toBe(1);
@@ -115,9 +164,27 @@ describe('overview', () => {
 
 describe('date filtering', () => {
   beforeEach(async () => {
-    await play(user, { date: '2026-01-10', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-02-10', games: [[15, 21], [17, 21]] });
-    await play(user, { date: '2026-03-10', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-01-10',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-02-10',
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-10',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
   });
 
   it('honours a custom range', async () => {
@@ -149,9 +216,27 @@ describe('date filtering', () => {
 
 describe('trend', () => {
   it('buckets by month and omits months with no play', async () => {
-    await play(user, { date: '2026-01-10', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-01-20', games: [[15, 21], [17, 21]] });
-    await play(user, { date: '2026-03-10', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-01-10',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-01-20',
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-10',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const response = await user.agent
       .get(`/api/v1/analytics/trend?${ALL_TIME}&granularity=MONTH`)
@@ -172,14 +257,20 @@ describe('breakdowns', () => {
       date: '2026-03-01',
       discipline: 'SINGLES',
       opponents: ['John Carter'],
-      games: [[21, 15], [21, 17]],
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
       venue: 'Riverside',
     });
     await play(user, {
       date: '2026-03-02',
       discipline: 'SINGLES',
       opponents: ['John Carter'],
-      games: [[15, 21], [17, 21]],
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
       venue: 'Riverside',
     });
     await play(user, {
@@ -187,7 +278,10 @@ describe('breakdowns', () => {
       discipline: 'DOUBLES',
       partner: 'Ahmed Rahim',
       opponents: ['John Carter', 'Priya Nair'],
-      games: [[21, 15], [21, 17]],
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
       venue: 'Northgate',
     });
   });
@@ -248,9 +342,29 @@ describe('breakdowns', () => {
 
 describe('situational analysis', () => {
   it('identifies comebacks, collapses and deciders', async () => {
-    await play(user, { date: '2026-03-01', games: [[18, 21], [21, 15], [21, 19]] });
-    await play(user, { date: '2026-03-02', games: [[21, 18], [15, 21], [19, 21]] });
-    await play(user, { date: '2026-03-03', games: [[21, 5], [21, 8]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [18, 21],
+        [21, 15],
+        [21, 19],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-02',
+      games: [
+        [21, 18],
+        [15, 21],
+        [19, 21],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-03',
+      games: [
+        [21, 5],
+        [21, 8],
+      ],
+    });
 
     const response = await user.agent.get(`/api/v1/analytics/situational?${ALL_TIME}`).expect(200);
 
@@ -261,7 +375,13 @@ describe('situational analysis', () => {
   });
 
   it('withholds a consistency score below the sample threshold', async () => {
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
     const response = await user.agent.get(`/api/v1/analytics/situational?${ALL_TIME}`).expect(200);
 
     expect(response.body.consistency.score).toBeNull();
@@ -279,7 +399,16 @@ describe('insights', () => {
     for (let day = 1; day <= 12; day += 1) {
       await play(user, {
         date: `2026-03-${String(day).padStart(2, '0')}`,
-        games: day % 3 === 0 ? [[15, 21], [17, 21]] : [[21, 15], [21, 17]],
+        games:
+          day % 3 === 0
+            ? [
+                [15, 21],
+                [17, 21],
+              ]
+            : [
+                [21, 15],
+                [21, 17],
+              ],
       });
     }
 
@@ -302,7 +431,13 @@ describe('rating', () => {
   });
 
   it('moves the rating up on a win and records the history', async () => {
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const rating = await user.agent.get('/api/v1/analytics/rating').expect(200);
     expect(rating.body.overall).toBeGreaterThan(1200);
@@ -313,7 +448,13 @@ describe('rating', () => {
   });
 
   it('recomputes the rating when a match is deleted', async () => {
-    const match = await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
+    const match = await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const afterWin = await user.agent.get('/api/v1/analytics/rating').expect(200);
     expect(afterWin.body.overall).toBeGreaterThan(1200);
@@ -330,8 +471,20 @@ describe('rating', () => {
 
 describe('records and heatmap', () => {
   it('derives personal records from raw matches', async () => {
-    await play(user, { date: '2026-03-01', games: [[30, 29], [21, 19]] });
-    await play(user, { date: '2026-03-02', games: [[21, 4], [21, 6]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [30, 29],
+        [21, 19],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-02',
+      games: [
+        [21, 4],
+        [21, 6],
+      ],
+    });
 
     const response = await user.agent.get(`/api/v1/analytics/records?${ALL_TIME}`).expect(200);
     const byCode = Object.fromEntries(
@@ -344,9 +497,27 @@ describe('records and heatmap', () => {
   });
 
   it('counts activity per day', async () => {
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-03-01', games: [[15, 21], [17, 21]] });
-    await play(user, { date: '2026-03-05', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [15, 21],
+        [17, 21],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-05',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const response = await user.agent.get(`/api/v1/analytics/heatmap?${ALL_TIME}`).expect(200);
     const days = response.body.days as Array<{ date: string; matches: number; sessions: number }>;
@@ -370,16 +541,40 @@ describe('goals', () => {
       })
       .expect(201);
 
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-03-02', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-02',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const halfway = await user.agent.get('/api/v1/goals').expect(200);
     expect(halfway.body.items[0].currentValue).toBe(2);
     expect(halfway.body.items[0].percentComplete).toBe(50);
     expect(halfway.body.items[0].status).toBe('ACTIVE');
 
-    await play(user, { date: '2026-03-03', games: [[21, 15], [21, 17]] });
-    await play(user, { date: '2026-03-04', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-03',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
+    await play(user, {
+      date: '2026-03-04',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const done = await user.agent.get('/api/v1/goals').expect(200);
     expect(done.body.items[0].currentValue).toBe(4);
@@ -398,13 +593,23 @@ describe('goals', () => {
       })
       .expect(201);
 
-    await play(user, { date: '2026-03-01', discipline: 'SINGLES', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      discipline: 'SINGLES',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
     await play(user, {
       date: '2026-03-02',
       discipline: 'DOUBLES',
       partner: 'Ahmed Rahim',
       opponents: ['John Carter', 'Priya Nair'],
-      games: [[21, 15], [21, 17]],
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
     });
 
     const response = await user.agent.get('/api/v1/goals').expect(200);
@@ -414,7 +619,13 @@ describe('goals', () => {
 
 describe('achievements', () => {
   it('unlocks automatically and never twice', async () => {
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const list = await user.agent.get('/api/v1/achievements').expect(200);
     const first = list.body.find((entry: { code: string }) => entry.code === 'FIRST_MATCH');
@@ -432,7 +643,13 @@ describe('achievements', () => {
   });
 
   it('reports progress towards locked achievements', async () => {
-    await play(user, { date: '2026-03-01', games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const list = await user.agent.get('/api/v1/achievements').expect(200);
     const tenMatches = list.body.find((entry: { code: string }) => entry.code === 'MATCHES_10');
@@ -447,7 +664,16 @@ describe('reports and search', () => {
     for (let day = 1; day <= 6; day += 1) {
       await play(user, {
         date: `2026-03-0${day}`,
-        games: day % 2 === 0 ? [[15, 21], [17, 21]] : [[21, 15], [21, 17]],
+        games:
+          day % 2 === 0
+            ? [
+                [15, 21],
+                [17, 21],
+              ]
+            : [
+                [21, 15],
+                [21, 17],
+              ],
       });
     }
 
@@ -462,7 +688,14 @@ describe('reports and search', () => {
   });
 
   it('searches across players and matches', async () => {
-    await play(user, { date: '2026-03-01', opponents: ['John Carter'], games: [[21, 15], [21, 17]] });
+    await play(user, {
+      date: '2026-03-01',
+      opponents: ['John Carter'],
+      games: [
+        [21, 15],
+        [21, 17],
+      ],
+    });
 
     const response = await user.agent.get('/api/v1/analytics/search?q=Carter').expect(200);
     expect(response.body.players).toHaveLength(1);

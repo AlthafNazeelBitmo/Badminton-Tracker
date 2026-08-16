@@ -41,7 +41,8 @@ async function bootstrap(): Promise<void> {
       },
       crossOriginEmbedderPolicy: false,
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-      hsts: config.NODE_ENV === 'production' ? { maxAge: 31_536_000, includeSubDomains: true } : false,
+      hsts:
+        config.NODE_ENV === 'production' ? { maxAge: 31_536_000, includeSubDomains: true } : false,
     }),
   );
 
@@ -99,7 +100,6 @@ async function bootstrap(): Promise<void> {
 
 void bootstrap().catch((error: unknown) => {
   // Nothing is initialised yet, so this is the one place a bare console write is right.
-  // eslint-disable-next-line no-console
   console.error('Failed to start API:', error instanceof Error ? error.message : error);
   process.exit(1);
 });

@@ -104,8 +104,7 @@ export function aggregate(matches: readonly MatchRecord[]): PerformanceStats {
     averageWinningMargin: mean(winningMargins),
     averageLosingMargin: mean(losingMargins),
     playingSeconds,
-    averageMatchSeconds:
-      timedMatches === 0 ? null : round(playingSeconds / timedMatches, 0),
+    averageMatchSeconds: timedMatches === 0 ? null : round(playingSeconds / timedMatches, 0),
   };
 }
 

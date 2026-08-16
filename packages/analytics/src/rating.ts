@@ -146,13 +146,16 @@ export function replayRatings(
     disciplineState.matches += 1;
 
     for (const partner of partners) {
-      partner.rating = clampRating(partner.rating + kFor(partner, config) * (actual - expected), config);
+      partner.rating = clampRating(
+        partner.rating + kFor(partner, config) * (actual - expected),
+        config,
+      );
       partner.matches += 1;
     }
     for (const opponent of opponents) {
       // The opposing side's outcome is the mirror image of the user's.
       opponent.rating = clampRating(
-        opponent.rating + kFor(opponent, config) * ((1 - actual) - (1 - expected)),
+        opponent.rating + kFor(opponent, config) * (1 - actual - (1 - expected)),
         config,
       );
       opponent.matches += 1;
@@ -179,9 +182,7 @@ export function replayRatings(
       DOUBLES: roundState(byDiscipline.DOUBLES),
       MIXED_DOUBLES: roundState(byDiscipline.MIXED_DOUBLES),
     },
-    playerRatings: new Map(
-      [...players.entries()].map(([id, state]) => [id, roundState(state)]),
-    ),
+    playerRatings: new Map([...players.entries()].map(([id, state]) => [id, roundState(state)])),
   };
 }
 

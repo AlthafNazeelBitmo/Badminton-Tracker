@@ -102,7 +102,9 @@ export function relativeTime(value: string | Date | null | undefined): string {
 }
 
 /** `21-18, 19-21, 21-16` from a match's games. */
-export function scoreline(games: ReadonlyArray<{ myScore: number; opponentScore: number }>): string {
+export function scoreline(
+  games: ReadonlyArray<{ myScore: number; opponentScore: number }>,
+): string {
   return games.map((game) => `${game.myScore}–${game.opponentScore}`).join(', ');
 }
 

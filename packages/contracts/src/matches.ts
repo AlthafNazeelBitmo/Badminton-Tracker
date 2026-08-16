@@ -47,7 +47,13 @@ const matchCoreSchema = z.object({
   /** The opposing side. One entry for singles, two for doubles. */
   opponents: z.array(playerRefSchema).min(1).max(3),
   games: z.array(gameScoreSchema).min(1).max(9),
-  durationSeconds: z.number().int().min(0).max(60 * 60 * 12).nullable().optional(),
+  durationSeconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(60 * 60 * 12)
+    .nullable()
+    .optional(),
   difficulty: ratingScaleSchema.nullable().optional(),
   energyLevel: ratingScaleSchema.nullable().optional(),
   confidence: ratingScaleSchema.nullable().optional(),

@@ -1,0 +1,79 @@
+# Local development stack: database, API and web app.
+#
+#   docker compose up -d db          # just PostgreSQL, run the apps with npm run dev
+#   docker compose up --build        # the whole stack in containers
+#
+# This file is for development. Production uses managed PostgreSQL with backups and
+# point-in-time recovery — see docs/deployment.md — not a database in a container next
+# to the app.
+
+name: badminton-tracker
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: badminton
+      # Faster than the default and irrelevant for a throwaway dev database.
+      POSTGRES_INITDB_ARGS: '--auth-host=scram-sha-256'
+    ports:
+      # Bound to localhost only: a dev database must not be reachable from the network.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d badminton']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/badminton?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@db:5432/badminton_test?schema=public
+      WEB_PUBLIC_URL: http://localhost:3000
+      API_PUBLIC_URL: http://localhost:4000
+      # Development-only values. Production secrets come from the platform's secret
+      # store and are never written into a compose file.
+      JWT_ACCESS_SECRET: dev-access-key-not-for-production-0123456789abcd
+      JWT_REFRESH_SECRET: dev-refresh-key-not-for-production-abcdef98765432
+      COOKIE_SECURE: 'false'
+      LOG_JSON: 'false'
+    ports:
+      - '127.0.0.1:4000:4000'
+    # Migrations are applied on start so a fresh checkout works with one command.
+    command: >
+      sh -c "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma &&
+             node apps/api/dist/main.js"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - '127.0.0.1:3000:3000'
+
+volumes:
+  db-data:

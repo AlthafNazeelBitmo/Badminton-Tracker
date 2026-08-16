@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { DATE_RANGE_PRESETS, DISCIPLINES, MATCH_RESULTS, PERFORMANCE_TAGS, SESSION_TYPES } from './enums';
+import {
+  DATE_RANGE_PRESETS,
+  DISCIPLINES,
+  MATCH_RESULTS,
+  PERFORMANCE_TAGS,
+  SESSION_TYPES,
+} from './enums';
 
 export const API_VERSION = 'v1';
 export const API_PREFIX = `/api/${API_VERSION}`;

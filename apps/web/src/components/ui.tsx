@@ -131,11 +131,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   },
 );
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  function Textarea({ className, ...rest }, ref) {
-    return <textarea ref={ref} className={cx(controlClasses, 'py-2.5', className)} {...rest} />;
-  },
-);
+export const Textarea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea({ className, ...rest }, ref) {
+  return <textarea ref={ref} className={cx(controlClasses, 'py-2.5', className)} {...rest} />;
+});
 
 // --- Layout ----------------------------------------------------------------
 
@@ -290,10 +291,7 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry?: () => v
 /** Skeleton placeholder sized like the content it replaces, to avoid layout shift. */
 export function Skeleton({ className }: { className?: string }) {
   return (
-    <div
-      aria-hidden="true"
-      className={cx('animate-pulse rounded bg-surface-sunken', className)}
-    />
+    <div aria-hidden="true" className={cx('animate-pulse rounded bg-surface-sunken', className)} />
   );
 }
 
@@ -310,8 +308,7 @@ export function Stat({
   delta?: number | null;
   tone?: 'win' | 'loss' | 'neutral';
 }) {
-  const toneClass =
-    tone === 'win' ? 'text-win' : tone === 'loss' ? 'text-loss' : 'text-ink';
+  const toneClass = tone === 'win' ? 'text-win' : tone === 'loss' ? 'text-loss' : 'text-ink';
 
   return (
     <div className="card card-pad">
@@ -337,8 +334,7 @@ export function Delta({ value, suffix = 'pts' }: { value: number; suffix?: strin
   const rising = value > 0;
   return (
     <span className={rising ? 'text-win' : 'text-loss'}>
-      <span aria-hidden="true">{rising ? '↑' : '↓'}</span>{' '}
-      {Math.abs(value).toFixed(1)} {suffix}
+      <span aria-hidden="true">{rising ? '↑' : '↓'}</span> {Math.abs(value).toFixed(1)} {suffix}
       <span className="sr-only">{rising ? ' increase' : ' decrease'}</span>
     </span>
   );

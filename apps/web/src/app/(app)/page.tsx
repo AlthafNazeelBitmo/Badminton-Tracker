@@ -11,14 +11,21 @@ import {
   useOverview,
   useTrend,
 } from '@/lib/hooks';
-import { EM_DASH, formatShortDate, joinNames, percent, scoreline, signed, totalTime } from '@/lib/format';
+import {
+  EM_DASH,
+  formatShortDate,
+  joinNames,
+  percent,
+  scoreline,
+  signed,
+  totalTime,
+} from '@/lib/format';
 import { ActivityHeatmap, ChartFrame, WinRateTrend } from '@/components/charts';
 import { SecondaryNav } from '@/components/app-shell';
 import {
   Badge,
   Card,
   CardHeader,
-  Delta,
   EmptyState,
   ErrorState,
   ResultBadge,
@@ -103,7 +110,10 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Am I winning? */}
-          <section aria-label="Headline statistics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <section
+            aria-label="Headline statistics"
+            className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          >
             <Stat
               label="Win rate"
               value={percent(stats?.winRate)}
@@ -207,8 +217,8 @@ export default function DashboardPage() {
                   </div>
                 ) : (insights.data?.length ?? 0) === 0 ? (
                   <p className="text-sm text-ink-secondary">
-                    Nothing meets the evidence threshold yet. Insights appear once there are
-                    enough matches to say something real.
+                    Nothing meets the evidence threshold yet. Insights appear once there are enough
+                    matches to say something real.
                   </p>
                 ) : (
                   <ul className="space-y-3">
@@ -299,15 +309,7 @@ export default function DashboardPage() {
   );
 }
 
-function StreakCard({
-  current,
-  best,
-  worst,
-}: {
-  current: number;
-  best: number;
-  worst: number;
-}) {
+function StreakCard({ current, best, worst }: { current: number; best: number; worst: number }) {
   const winning = current > 0;
   const losing = current < 0;
 
@@ -348,7 +350,11 @@ function InsightItem({ insight }: { insight: Insight }) {
   }[insight.kind];
 
   const tone =
-    insight.sentiment === 'POSITIVE' ? 'win' : insight.sentiment === 'NEGATIVE' ? 'loss' : 'neutral';
+    insight.sentiment === 'POSITIVE'
+      ? 'win'
+      : insight.sentiment === 'NEGATIVE'
+        ? 'loss'
+        : 'neutral';
 
   return (
     <li className="border-l-2 border-line pl-3">

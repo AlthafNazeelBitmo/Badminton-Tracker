@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestApp, registerUser, resetDatabase, type TestContext, type TestUser } from './harness';
+import {
+  createTestApp,
+  registerUser,
+  resetDatabase,
+  type TestContext,
+  type TestUser,
+} from './harness';
 
 let context: TestContext;
 let user: TestUser;
@@ -105,10 +111,7 @@ describe('import commit', () => {
       ),
     };
 
-    const preview = await user.agent
-      .post('/api/v1/transfer/import/preview')
-      .send(body)
-      .expect(200);
+    const preview = await user.agent.post('/api/v1/transfer/import/preview').send(body).expect(200);
     expect(preview.body.readyRows).toBe(2);
 
     const commit = await user.agent
@@ -160,10 +163,7 @@ describe('import commit', () => {
       .send({ ...body, acceptRows: [2] })
       .expect(201);
 
-    const second = await user.agent
-      .post('/api/v1/transfer/import/preview')
-      .send(body)
-      .expect(200);
+    const second = await user.agent.post('/api/v1/transfer/import/preview').send(body).expect(200);
 
     expect(second.body.duplicateRows).toBe(1);
     expect(second.body.readyRows).toBe(0);

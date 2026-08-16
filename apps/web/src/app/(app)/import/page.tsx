@@ -21,23 +21,32 @@ export default function ImportExportPage() {
   const [dataset, setDataset] = useState('matches');
   const [format, setFormat] = useState('csv');
 
-  const { run: runPreview, isPending: previewing, error: previewError } = useAction(async () => {
+  const {
+    run: runPreview,
+    isPending: previewing,
+    error: previewError,
+  } = useAction(async () => {
     setCommitted(null);
     const result = await api.post<ImportPreviewResponse>('/transfer/import/preview', { csv });
     setPreview(result);
     return result;
   });
 
-  const { run: runCommit, isPending: committing, error: commitError } = useAction(async () => {
+  const {
+    run: runCommit,
+    isPending: committing,
+    error: commitError,
+  } = useAction(async () => {
     if (!preview) return null;
     const acceptRows = preview.rows
       .filter((row) => row.status === 'READY')
       .map((row) => row.rowNumber);
 
-    const result = await api.post<{ importedMatches: number; createdPlayers: number; createdVenues: number }>(
-      '/transfer/import/commit',
-      { csv, acceptRows },
-    );
+    const result = await api.post<{
+      importedMatches: number;
+      createdPlayers: number;
+      createdVenues: number;
+    }>('/transfer/import/commit', { csv, acceptRows });
 
     invalidateMatchData();
     setPreview(null);
@@ -76,10 +85,7 @@ export default function ImportExportPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Export */}
         <Card>
-          <CardHeader
-            title="Export"
-            description="Your data, in a format other tools can read."
-          />
+          <CardHeader title="Export" description="Your data, in a format other tools can read." />
           <div className="space-y-3 p-4 sm:p-5">
             <div className="flex flex-wrap gap-2">
               <label className="flex-1">
@@ -106,8 +112,8 @@ export default function ImportExportPage() {
             </Button>
 
             <p className="text-xs text-ink-muted">
-              The match CSV uses the same columns the importer accepts, so you can export,
-              edit in a spreadsheet and import the file straight back.
+              The match CSV uses the same columns the importer accepts, so you can export, edit in a
+              spreadsheet and import the file straight back.
             </p>
           </div>
         </Card>
@@ -182,7 +188,10 @@ export default function ImportExportPage() {
             ) : null}
 
             {committed ? (
-              <p role="status" className="rounded border border-line bg-accent-soft px-3 py-2 text-sm text-ink">
+              <p
+                role="status"
+                className="rounded border border-line bg-accent-soft px-3 py-2 text-sm text-ink"
+              >
                 {committed}
               </p>
             ) : null}
@@ -208,7 +217,10 @@ export default function ImportExportPage() {
           />
 
           {commitError ? (
-            <p role="alert" className="mx-4 mt-3 rounded border border-loss px-3 py-2 text-sm text-loss sm:mx-5">
+            <p
+              role="alert"
+              className="mx-4 mt-3 rounded border border-loss px-3 py-2 text-sm text-loss sm:mx-5"
+            >
               {commitError.message}
             </p>
           ) : null}
@@ -218,13 +230,27 @@ export default function ImportExportPage() {
               <caption className="sr-only">Rows found in the uploaded file</caption>
               <thead className="sticky top-0 bg-surface-raised">
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-muted">
-                  <th scope="col" className="px-3 py-2 font-medium">Row</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Status</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Date</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Format</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Opponents</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Scores</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Notes</th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Row
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Status
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Date
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Format
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Opponents
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Scores
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Notes
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -239,7 +265,11 @@ export default function ImportExportPage() {
                     <td className="px-3 py-2">
                       <Badge
                         tone={
-                          row.status === 'READY' ? 'win' : row.status === 'DUPLICATE' ? 'warn' : 'loss'
+                          row.status === 'READY'
+                            ? 'win'
+                            : row.status === 'DUPLICATE'
+                              ? 'warn'
+                              : 'loss'
                         }
                       >
                         {row.status === 'READY'
@@ -260,8 +290,9 @@ export default function ImportExportPage() {
                       ) : null}
                     </td>
                     <td className="tabular px-3 py-2 text-ink-secondary">
-                      {row.games.map((game) => `${game.myScore}-${game.opponentScore}`).join(', ') ||
-                        '—'}
+                      {row.games
+                        .map((game) => `${game.myScore}-${game.opponentScore}`)
+                        .join(', ') || '—'}
                     </td>
                     <td className="px-3 py-2">
                       {row.issues.length === 0 ? (

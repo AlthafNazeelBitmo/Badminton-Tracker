@@ -162,11 +162,7 @@ describe('session lifecycle', () => {
 
     const stale = extractCookieValue(staleCookie, 'bt_refresh');
     if (stale) {
-      await context
-        .http()
-        .post('/api/v1/auth/refresh')
-        .set('x-refresh-token', stale)
-        .expect(401);
+      await context.http().post('/api/v1/auth/refresh').set('x-refresh-token', stale).expect(401);
 
       const tokens = await context.prisma.refreshToken.findMany({ where: { userId: user.id } });
       expect(tokens.every((token) => token.revokedAt !== null)).toBe(true);

@@ -61,14 +61,13 @@ export class RateLimitGuard implements CanActivate {
     ]);
     if (skip) return true;
 
-    const options =
-      this.reflector.getAllAndOverride<RateLimitOptions>(RATE_LIMIT_KEY, [
-        context.getHandler(),
-        context.getClass(),
-      ]) ?? {
-        limit: this.config.RATE_LIMIT_MAX,
-        windowSeconds: this.config.RATE_LIMIT_WINDOW_SECONDS,
-      };
+    const options = this.reflector.getAllAndOverride<RateLimitOptions>(RATE_LIMIT_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]) ?? {
+      limit: this.config.RATE_LIMIT_MAX,
+      windowSeconds: this.config.RATE_LIMIT_WINDOW_SECONDS,
+    };
 
     const http = context.switchToHttp();
     const request = http.getRequest<Request & { user?: { id: string } }>();

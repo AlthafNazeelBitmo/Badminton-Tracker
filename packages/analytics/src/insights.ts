@@ -1,7 +1,12 @@
 import type { Insight, InsightSentiment } from '@badminton/contracts';
 import { ANALYTICS_CONSTANTS, type MatchRecord } from './types';
 import { aggregate, byPlayedAtAscending, computeStreaks } from './aggregate';
-import { breakdownByDiscipline, breakdownByPartner, breakdownByVenue, groupMatches } from './breakdowns';
+import {
+  breakdownByDiscipline,
+  breakdownByPartner,
+  breakdownByVenue,
+  groupMatches,
+} from './breakdowns';
 import { situationalAnalysis } from './situational';
 import { fatigueAnalysis } from './fatigue';
 import { daysBetween } from './time';
@@ -86,7 +91,10 @@ export function generateInsights(
   // --- Singles versus doubles ---------------------------------------------
   const disciplines = breakdownByDiscipline(ordered);
   const singles = disciplines.get('SINGLES') ?? [];
-  const doubles = [...(disciplines.get('DOUBLES') ?? []), ...(disciplines.get('MIXED_DOUBLES') ?? [])];
+  const doubles = [
+    ...(disciplines.get('DOUBLES') ?? []),
+    ...(disciplines.get('MIXED_DOUBLES') ?? []),
+  ];
   const min = ANALYTICS_CONSTANTS.minMatchesForInsight;
 
   if (singles.length >= min && doubles.length >= min) {
@@ -144,7 +152,9 @@ export function generateInsights(
 
   // --- Deciding games against the toughest opponent ------------------------
   if (toughest) {
-    const deciderMatches = toughest.group.filter((match) => match.games.length === match.scoring.bestOf && match.scoring.bestOf > 1);
+    const deciderMatches = toughest.group.filter(
+      (match) => match.games.length === match.scoring.bestOf && match.scoring.bestOf > 1,
+    );
     if (deciderMatches.length >= 3) {
       const deciderStats = aggregate(deciderMatches);
       if (deciderStats.winRate !== null && deciderStats.winRate < 50) {
@@ -218,7 +228,9 @@ export function generateInsights(
 
   if (situational.clutch.stats.matches >= min && situational.clutch.stats.winRate !== null) {
     const clutchGap =
-      overall.winRate === null ? null : round(situational.clutch.stats.winRate - overall.winRate, 1);
+      overall.winRate === null
+        ? null
+        : round(situational.clutch.stats.winRate - overall.winRate, 1);
     if (clutchGap !== null && Math.abs(clutchGap) >= 10) {
       push({
         id: 'clutch-performance',
@@ -268,7 +280,9 @@ export function generateInsights(
     .filter((entry) => entry.stats.winRate !== null);
 
   if (rankedVenues.length >= 2 && overall.winRate !== null) {
-    const best = [...rankedVenues].sort((a, b) => (b.stats.winRate ?? 0) - (a.stats.winRate ?? 0))[0];
+    const best = [...rankedVenues].sort(
+      (a, b) => (b.stats.winRate ?? 0) - (a.stats.winRate ?? 0),
+    )[0];
     if (best && (best.stats.winRate ?? 0) - overall.winRate >= 10) {
       push({
         id: `venue-strength-${best.venueId}`,
@@ -352,7 +366,12 @@ function buildRecommendation(
   const overall = aggregate(matches);
   if (overall.winRate === null) return null;
 
-  const candidates: Array<{ gap: number; title: string; detail: string; evidence: Record<string, number | string | null> }> = [];
+  const candidates: Array<{
+    gap: number;
+    title: string;
+    detail: string;
+    evidence: Record<string, number | string | null>;
+  }> = [];
 
   if (situational.deciders.matches >= min && situational.deciders.winRate !== null) {
     candidates.push({

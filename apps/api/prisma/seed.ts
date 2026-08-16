@@ -68,7 +68,9 @@ function generateGame(winProbability: number): { myScore: number; opponentScore:
     // Deuce: 22-20 through 26-24, or the cap.
     const winner = 21 + between(1, 5);
     const loser = winner - 2;
-    return iWin ? { myScore: winner, opponentScore: loser } : { myScore: loser, opponentScore: winner };
+    return iWin
+      ? { myScore: winner, opponentScore: loser }
+      : { myScore: loser, opponentScore: winner };
   }
 
   if (roll < 0.28) {
@@ -178,7 +180,9 @@ async function main(): Promise<void> {
     ),
   );
 
-  const strengthOf = new Map(people.map((player, index) => [player.id, peopleSpec[index]!.strength]));
+  const strengthOf = new Map(
+    people.map((player, index) => [player.id, peopleSpec[index]!.strength]),
+  );
 
   // --- Venues --------------------------------------------------------------
   const venueSpec = [

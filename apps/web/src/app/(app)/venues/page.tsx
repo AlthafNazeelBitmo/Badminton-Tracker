@@ -2,11 +2,27 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { invalidateMatchData, useAction, useFilterState, useVenueAnalytics, useVenues } from '@/lib/hooks';
+import {
+  invalidateMatchData,
+  useAction,
+  useFilterState,
+  useVenueAnalytics,
+  useVenues,
+} from '@/lib/hooks';
 import { EM_DASH, duration, formatShortDate, percent, signed } from '@/lib/format';
 import { FilterBar } from '@/components/filter-bar';
 import { RankedBars } from '@/components/charts';
-import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, PageHeader, Skeleton } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  PageHeader,
+  Skeleton,
+} from '@/components/ui';
 import { StatsTable } from '@/components/stats-table';
 
 export default function VenuesPage() {
@@ -17,7 +33,11 @@ export default function VenuesPage() {
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
 
-  const { run: addVenue, isPending, error } = useAction(async () => {
+  const {
+    run: addVenue,
+    isPending,
+    error,
+  } = useAction(async () => {
     await api.post('/venues', { name, city: city || null });
     setName('');
     setCity('');
@@ -64,7 +84,11 @@ export default function VenuesPage() {
               />
             </Field>
             <Field label="City" htmlFor="venue-city">
-              <Input id="venue-city" value={city} onChange={(event) => setCity(event.target.value)} />
+              <Input
+                id="venue-city"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+              />
             </Field>
             <Button type="submit" variant="primary" loading={isPending} disabled={!name.trim()}>
               Save

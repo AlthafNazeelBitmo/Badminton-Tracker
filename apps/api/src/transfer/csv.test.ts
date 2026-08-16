@@ -35,10 +35,7 @@ describe('parseCsv', () => {
   });
 
   it('strips a UTF-8 byte-order mark', () => {
-    expect(parseCsv('﻿date,discipline\n2026-01-01,SINGLES')[0]).toEqual([
-      'date',
-      'discipline',
-    ]);
+    expect(parseCsv('﻿date,discipline\n2026-01-01,SINGLES')[0]).toEqual(['date', 'discipline']);
   });
 
   it('ignores a trailing newline rather than emitting an empty row', () => {

@@ -20,7 +20,12 @@
  *   npm run recompute -w @badminton/api -- --check  # report drift without writing
  */
 import { PrismaClient } from '@prisma/client';
-import { deriveMatch, replayRatings, ratingDeviation, DEFAULT_RATING_CONFIG } from '@badminton/analytics';
+import {
+  deriveMatch,
+  replayRatings,
+  ratingDeviation,
+  DEFAULT_RATING_CONFIG,
+} from '@badminton/analytics';
 
 const prisma = new PrismaClient();
 
@@ -182,7 +187,10 @@ async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
   const users = options.userId
-    ? await prisma.user.findMany({ where: { id: options.userId }, select: { id: true, email: true } })
+    ? await prisma.user.findMany({
+        where: { id: options.userId },
+        select: { id: true, email: true },
+      })
     : await prisma.user.findMany({ select: { id: true, email: true } });
 
   if (users.length === 0) {

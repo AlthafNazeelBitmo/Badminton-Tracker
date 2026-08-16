@@ -1,0 +1,219 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A new push supersedes the run in progress; there is no value in finishing a build
+  # of code nobody will merge.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # Fast feedback: everything that needs no database runs first and in parallel.
+  static:
+    name: Lint, types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared packages
+        run: npm run build:packages
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema apps/api/prisma/schema.prisma
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: |
+          npm run test -w @badminton/analytics
+          npm run test -w @badminton/api
+          npm run test -w @badminton/web
+
+  integration:
+    name: API integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: badminton_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/badminton_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/badminton_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build:packages
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+
+      - name: Apply migrations
+        # `migrate deploy` rather than `db push`, so CI verifies the committed
+        # migrations rather than an approximation of them.
+        run: npm run db:deploy -w @badminton/api
+
+      - name: Verify migrations match the schema
+        # A schema edited without a matching migration is a deployment that will fail
+        # in production; catch it here instead.
+        run: npx prisma migrate diff --from-migrations apps/api/prisma/migrations --to-schema-datamodel apps/api/prisma/schema.prisma --shadow-database-url "$DATABASE_URL" --exit-code
+        continue-on-error: false
+
+      - name: Integration tests
+        run: npm run test:e2e -w @badminton/api
+
+  e2e:
+    name: Browser end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: badminton
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/badminton?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-long-enough-for-validation-0123456789
+      JWT_REFRESH_SECRET: ci-refresh-secret-long-enough-for-validation-9876543210
+      WEB_PUBLIC_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      COOKIE_SECURE: 'false'
+      # The suite registers many accounts, which the per-route auth limits would
+      # reject. Production configuration refuses to start with this switched off.
+      RATE_LIMIT_ENABLED: 'false'
+      LOG_LEVEL: error
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build:packages
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npm run db:deploy -w @badminton/api
+
+      - name: Build applications
+        run: |
+          npm run build -w @badminton/api
+          npm run build -w @badminton/web
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Start API
+        run: |
+          node apps/api/dist/main.js &
+          npx wait-on http://localhost:4000/health/ready --timeout 60000
+
+      - name: Start web
+        # `start:standalone` copies the static assets into the standalone bundle and
+        # runs the server from inside it. Next does not copy `static` itself, and the
+        # server resolves `.next` relative to its own directory — getting either wrong
+        # yields a page that renders but cannot load its own JavaScript.
+        run: |
+          npm run start:standalone -w @badminton/web &
+          npx wait-on http://localhost:3000/login --timeout 60000
+
+      - name: Run end-to-end tests
+        run: npm run test:e2e -w @badminton/web
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  docker:
+    name: Container images build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # The gate a branch protection rule points at: one required check rather than six,
+  # so adding a job later does not mean editing repository settings.
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    needs: [static, integration, e2e, docker]
+    if: always()
+    steps:
+      - name: Verify every job succeeded
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
+          echo "All CI jobs passed."

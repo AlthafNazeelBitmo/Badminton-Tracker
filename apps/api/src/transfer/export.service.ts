@@ -196,7 +196,17 @@ export class ExportService {
         });
 
         return {
-          headers: ['date', 'sessionType', 'venue', 'matches', 'wins', 'losses', 'winRate', 'pointDifferential', 'notes'],
+          headers: [
+            'date',
+            'sessionType',
+            'venue',
+            'matches',
+            'wins',
+            'losses',
+            'winRate',
+            'pointDifferential',
+            'notes',
+          ],
           rows: json.map((session) => [
             session.date,
             session.sessionType,
@@ -233,7 +243,17 @@ export class ExportService {
         }));
 
         return {
-          headers: ['name', 'nickname', 'relationship', 'playingLevel', 'dominantHand', 'playingStyle', 'rating', 'matchesPlayed', 'notes'],
+          headers: [
+            'name',
+            'nickname',
+            'relationship',
+            'playingLevel',
+            'dominantHand',
+            'playingStyle',
+            'rating',
+            'matchesPlayed',
+            'notes',
+          ],
           rows: json.map((player) => [
             player.name,
             player.nickname ?? '',

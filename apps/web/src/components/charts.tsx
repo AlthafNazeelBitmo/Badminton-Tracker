@@ -267,14 +267,9 @@ export function RankedBars({
                 role="img"
                 aria-label={`${row.label}: ${row.value === null ? 'no data' : formatValue(row.value)} ${valueLabel}`}
               >
-                <div
-                  className="h-full rounded-sm bg-accent"
-                  style={{ width: `${width}%` }}
-                />
+                <div className="h-full rounded-sm bg-accent" style={{ width: `${width}%` }} />
               </div>
-              {row.detail ? (
-                <p className="mt-0.5 text-xs text-ink-muted">{row.detail}</p>
-              ) : null}
+              {row.detail ? <p className="mt-0.5 text-xs text-ink-muted">{row.detail}</p> : null}
             </div>
           </li>
         );
@@ -314,8 +309,7 @@ export function WonLostBars({
           cursor={{ fill: 'var(--surface-0)' }}
           content={({ active, payload }) => {
             const point = payload?.[0]?.payload as
-              | { label: string; won: number; lost: number }
-              | undefined;
+              { label: string; won: number; lost: number } | undefined;
             if (!active || !point) return null;
             return (
               <TooltipShell>
@@ -389,8 +383,7 @@ export function RatingTrend({
           cursor={{ stroke: 'var(--axis)' }}
           content={({ active, payload }) => {
             const point = payload?.[0]?.payload as
-              | { playedAt: string; rating: number; result: string }
-              | undefined;
+              { playedAt: string; rating: number; result: string } | undefined;
             if (!active || !point) return null;
             return (
               <TooltipShell>
@@ -465,11 +458,7 @@ export function ActivityHeatmap({
   return (
     <div>
       <div className="overflow-x-auto pb-1">
-        <div
-          role="img"
-          aria-labelledby={titleId}
-          className="flex min-w-max gap-1"
-        >
+        <div role="img" aria-labelledby={titleId} className="flex min-w-max gap-1">
           <span id={titleId} className="sr-only">
             Activity over the last {weeks} weeks. Darker squares mean more sessions that day.
           </span>
@@ -524,9 +513,7 @@ export function SessionPositionBars({
     <ul className="space-y-2.5">
       {buckets.map((bucket) => (
         <li key={bucket.matchNumber} className="flex items-center gap-3">
-          <span className="w-16 shrink-0 text-xs text-ink-muted">
-            Match {bucket.matchNumber}
-          </span>
+          <span className="w-16 shrink-0 text-xs text-ink-muted">Match {bucket.matchNumber}</span>
           <div className="h-6 flex-1 overflow-hidden rounded-sm bg-surface-sunken">
             <div
               className="flex h-full items-center justify-end rounded-sm bg-accent px-2"

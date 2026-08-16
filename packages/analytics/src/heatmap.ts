@@ -58,7 +58,8 @@ export function buildHeatmap(
   }
 
   const mostActiveWeekday = [...weekdayCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
-  const mostActiveMonth = [...monthCounts.entries()].sort((a, b) => b[1].sessions - a[1].sessions)[0] ?? null;
+  const mostActiveMonth =
+    [...monthCounts.entries()].sort((a, b) => b[1].sessions - a[1].sessions)[0] ?? null;
 
   const totalSessions = [...sessionsPerDay.values()].reduce((total, set) => total + set.size, 0);
   const spanDays = Math.max(
@@ -80,8 +81,7 @@ export function buildHeatmap(
     mostActiveMonth: mostActiveMonth
       ? { month: mostActiveMonth[1].label, sessions: mostActiveMonth[1].sessions }
       : null,
-    averageSessionsPerWeek:
-      totalSessions === 0 ? null : round((totalSessions / spanDays) * 7, 2),
+    averageSessionsPerWeek: totalSessions === 0 ? null : round((totalSessions / spanDays) * 7, 2),
     longestActiveStreakDays: longestConsecutiveDays(orderedKeys),
   };
 }
