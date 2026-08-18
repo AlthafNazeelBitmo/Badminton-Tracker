@@ -7,6 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '@/theme/theme';
 import { AuthProvider, useAuth } from '@/lib/auth/auth-store';
 import { SyncProvider } from '@/lib/sync/use-sync';
+import { AppLockOverlay } from '@/components/lock-gate';
+import { currentPermission, registerDevice, requestPushToken } from '@/lib/notifications/push';
 
 // Held until the session has been read from the keychain, so the app never shows sign-in
 // for a moment before replacing it with the dashboard.
@@ -45,6 +47,8 @@ function SessionGate(): React.JSX.Element {
   const segments = useSegments();
   const router = useRouter();
 
+  useDeviceRegistration(status === 'signed-in');
+
   useEffect(() => {
     if (status === 'loading') return;
 
@@ -82,6 +86,30 @@ function SessionGate(): React.JSX.Element {
           }}
         />
       </Stack>
+
+      {/* Rendered last so it sits above everything, including a screen already mounted
+          when the app was backgrounded. */}
+      {status === 'signed-in' ? <AppLockOverlay /> : null}
     </SyncProvider>
   );
+}
+
+/**
+ * Registers this device with the API on launch.
+ *
+ * Separate from the push permission, which is only ever requested from settings. This
+ * runs unprompted because it is also what populates the list of signed-in devices, and
+ * because the operating system rotates push tokens — a stale one fails silently, and
+ * notifications just stop arriving with nothing to say why.
+ */
+function useDeviceRegistration(signedIn: boolean): void {
+  useEffect(() => {
+    if (!signedIn) return;
+
+    void (async () => {
+      // Only fetches a token if permission was granted previously; this never prompts.
+      const token = (await currentPermission()) === 'granted' ? await requestPushToken() : null;
+      await registerDevice(token);
+    })();
+  }, [signedIn]);
 }

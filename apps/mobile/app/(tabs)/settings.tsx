@@ -8,6 +8,7 @@ import { Badge, Button, Card, Divider, ScreenTitle } from '@/components/ui';
 import { useAuth } from '@/lib/auth/auth-store';
 import { useSync } from '@/lib/sync/use-sync';
 import { listAll, remove as removeEntry, retryFailed, type OutboxEntry } from '@/lib/sync/outbox';
+import { PrivacySettings } from '@/components/privacy-settings';
 import { config } from '@/lib/config';
 
 /**
@@ -166,6 +167,8 @@ export default function SettingsScreen(): React.JSX.Element {
           ))}
         </View>
       ) : null}
+
+      <PrivacySettings />
 
       <Card>
         <Text style={[typography.caption, { color: palette.textSecondary }]}>About</Text>
