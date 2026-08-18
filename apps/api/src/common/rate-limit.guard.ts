@@ -39,8 +39,11 @@ interface Bucket {
  * point swap the store for Redis. The interface here does not change when you do,
  * which is the point of keeping it behind a guard.
  *
- * Authenticated requests are keyed by user id so one user on a shared NAT cannot
- * exhaust everyone else's budget. Anonymous requests fall back to a hashed IP.
+ * Authenticated requests are keyed by user id so one user on a shared NAT cannot exhaust
+ * everyone else's budget — which is why this guard is registered *after* `AuthGuard`,
+ * where `request.user` is populated (see the note in `AppModule`). Anonymous requests,
+ * meaning the `@Public()` auth routes, fall back to a hashed IP because an address is the
+ * only identity they have.
  */
 @Injectable()
 export class RateLimitGuard implements CanActivate {

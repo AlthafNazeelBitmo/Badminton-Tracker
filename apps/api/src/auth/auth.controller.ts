@@ -34,6 +34,7 @@ import { UnauthorizedError } from '../common/errors';
 import { AuthService } from './auth.service';
 import { CurrentUser, Public } from './current-user.decorator';
 import { REFRESH_TOKEN_COOKIE, clearAuthCookies, setAuthCookies } from './cookies';
+import { isNativeClient } from './client-kind';
 
 /**
  * Authentication endpoints.
@@ -70,7 +71,7 @@ export class AuthController {
       );
     }
 
-    return { user: result.user, expiresIn: result.tokens.expiresIn };
+    return sessionFor(request, result.user, result.tokens);
   }
 
   @Public()
@@ -85,7 +86,7 @@ export class AuthController {
   ): Promise<SessionResponse> {
     const result = await this.auth.login(input, metaFrom(request));
     setAuthCookies(response, this.config, result.tokens);
-    return { user: result.user, expiresIn: result.tokens.expiresIn };
+    return sessionFor(request, result.user, result.tokens);
   }
 
   @Public()
@@ -102,7 +103,7 @@ export class AuthController {
 
     const result = await this.auth.refresh(token, metaFrom(request));
     setAuthCookies(response, this.config, result);
-    return { user: result.user, expiresIn: result.expiresIn };
+    return sessionFor(request, result.user, result);
   }
 
   @Post('logout')
@@ -193,6 +194,26 @@ export class AuthController {
     }
     return { message: 'If your address is unverified, a new link has been sent.' };
   }
+}
+
+/**
+ * Builds the session response, including the raw tokens only for native clients.
+ *
+ * Cookies are still set in every case: harmless for a native client that ignores them,
+ * and the only mechanism a browser gets.
+ */
+function sessionFor(
+  request: Request,
+  user: AuthenticatedUser,
+  tokens: { accessToken: string; refreshToken: string; expiresIn: number },
+): SessionResponse {
+  return {
+    user,
+    expiresIn: tokens.expiresIn,
+    ...(isNativeClient(request)
+      ? { tokens: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } }
+      : {}),
+  };
 }
 
 function metaFrom(request: Request): { ipHash: string; userAgent: string | undefined } {

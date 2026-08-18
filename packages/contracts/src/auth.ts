@@ -104,4 +104,17 @@ export interface SessionResponse {
   user: AuthenticatedUser;
   /** Seconds until the access token expires; the client refreshes shortly before. */
   expiresIn: number;
+  /**
+   * Present only for native clients, which identify themselves with the
+   * `X-Client-Kind: native` header.
+   *
+   * Browsers receive their tokens as httpOnly cookies and never see this field —
+   * putting a token in a body a script can read would give up the protection the
+   * cookie design exists for. Native apps have somewhere better to keep it (the iOS
+   * Keychain, the Android Keystore), so they get it here.
+   */
+  tokens?: {
+    accessToken: string;
+    refreshToken: string;
+  };
 }

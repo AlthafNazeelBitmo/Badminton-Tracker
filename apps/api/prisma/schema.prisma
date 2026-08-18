@@ -180,6 +180,8 @@ model User {
   notifications    Notification[]
   ratingEvents     RatingEvent[]
   auditLogs        AuditLog[]
+  devices          Device[]
+  idempotencyKeys  IdempotencyKey[]
 
   @@index([disabledAt])
   @@map("users")
@@ -563,4 +565,79 @@ model AuditLog {
   @@index([userId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Mobile clients
+// ---------------------------------------------------------------------------
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+/// A device that has signed in and may receive push notifications.
+///
+/// Keyed by an installation id the client generates once and keeps in secure
+/// storage, so reinstalling the app produces a new device rather than silently
+/// inheriting the old one's notification subscription.
+model Device {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  installationId String
+  platform       DevicePlatform
+  /// Expo push token. Null when the user declined notification permission —
+  /// which is a normal state, not an error.
+  pushToken      String?
+  appVersion     String?
+  osVersion      String?
+  deviceName     String?
+  locale         String?
+  timeZone       String?
+  lastSeenAt     DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// One row per installation per user; signing in again updates rather than duplicates.
+  @@unique([userId, installationId])
+  @@index([userId, lastSeenAt])
+  @@index([pushToken])
+  @@map("devices")
+}
+
+/// Replay protection for writes retried from an offline queue.
+///
+/// The mobile app records matches while offline and drains a queue when the
+/// connection returns. A retry after a response was lost must not create a second
+/// match, so the client sends a stable key per queued operation and the server
+/// returns the original result instead of acting twice.
+///
+/// The response body is stored so a replay is answered identically, including the
+/// generated ids the client is waiting for.
+model IdempotencyKey {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  /// Client-generated, unique per operation.
+  key          String
+  /// Route the key was used against; the same key on a different endpoint is a
+  /// client bug and is rejected rather than silently replayed.
+  endpoint     String
+  /// Digest of the request body. A key reused with different content is a conflict,
+  /// not a replay.
+  requestHash  String
+  statusCode   Int
+  responseBody Json
+  createdAt    DateTime @default(now())
+  /// Retained briefly; a queue that has not drained within the window has bigger
+  /// problems than duplicate protection.
+  expiresAt    DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }

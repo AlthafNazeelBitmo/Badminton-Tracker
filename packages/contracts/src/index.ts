@@ -10,3 +10,5 @@ export * from './goals';
 export * from './achievements';
 export * from './analytics';
 export * from './transfer';
+export * from './devices';
+export * from './sync';

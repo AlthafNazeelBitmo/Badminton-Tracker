@@ -48,10 +48,9 @@ jobs:
         run: npm run typecheck
 
       - name: Unit tests
-        run: |
-          npm run test -w @badminton/analytics
-          npm run test -w @badminton/api
-          npm run test -w @badminton/web
+        # Every workspace with a `test` script, so a package cannot quietly go untested
+        # by being left off this list.
+        run: npm run test --workspaces --if-present
 
   integration:
     name: API integration tests

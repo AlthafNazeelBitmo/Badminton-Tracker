@@ -25,6 +25,7 @@ import {
 } from '@badminton/contracts';
 import { zodBody, zodQuery } from '../common/zod-validation.pipe';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { Idempotent } from '../common/idempotency.interceptor';
 import { MatchesService } from './matches.service';
 
 @ApiTags('matches')
@@ -51,6 +52,9 @@ export class MatchesController {
   }
 
   @Post()
+  // Safe to retry from the mobile app's offline queue: a repeat with the same
+  // Idempotency-Key returns the original match rather than creating a second one.
+  @Idempotent()
   @ApiOperation({
     summary: 'Record a match',
     description:
