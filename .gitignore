@@ -31,3 +31,16 @@ blob-report/
 # Playwright artefacts
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+.expo-bundle-check/
+apps/mobile/android/
+apps/mobile/ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+apps/mobile/.easignore

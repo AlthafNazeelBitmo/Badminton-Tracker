@@ -64,15 +64,37 @@ export default tseslint.config(
     // for fixtures.
     files: [
       '**/*.test.ts',
+      '**/*.test.tsx',
       '**/*.spec.ts',
       '**/test/**',
       '**/e2e/**',
       'apps/api/prisma/seed.ts',
       'apps/api/src/cli/**',
+      'apps/mobile/jest.setup.js',
     ],
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
+  {
+    // Jest injects its globals rather than requiring an import, so they have to be
+    // declared or every `describe` reads as an undefined variable. The API and web
+    // suites use Vitest, which is imported explicitly and needs none of this.
+    files: ['apps/mobile/**/*.{test,spec}.{ts,tsx}', 'apps/mobile/jest.setup.js'],
+    languageOptions: {
+      globals: {
+        jest: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        beforeEach: 'readonly',
+        afterAll: 'readonly',
+        afterEach: 'readonly',
+      },
     },
   },
 );

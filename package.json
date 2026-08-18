@@ -17,6 +17,7 @@
     "dev": "npm run dev --workspaces --if-present",
     "dev:api": "npm run dev -w @badminton/api",
     "dev:web": "npm run dev -w @badminton/web",
+    "dev:mobile": "npm run start -w @badminton/mobile",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
