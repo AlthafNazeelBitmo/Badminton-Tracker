@@ -1,0 +1,27 @@
+# Excluded from the tarball uploaded to EAS Build.
+#
+# The monorepo root is the build context, so without this the upload includes the API's
+# node_modules, the web app's .next output and every test artefact — hundreds of
+# megabytes that the mobile build never reads.
+
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.expo
+**/.expo-bundle-check
+**/test-results
+**/playwright-report
+apps/api/prisma/migrations
+docs
+*.log
+
+# Never upload secrets, whatever else changes here.
+.env
+.env.*
+!.env.example
+secrets/
+*.jks
+*.p8
+*.p12
+*.keystore

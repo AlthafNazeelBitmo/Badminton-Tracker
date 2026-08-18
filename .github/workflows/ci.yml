@@ -201,12 +201,49 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  mobile:
+    name: Mobile bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build:packages
+
+      - name: Export the JavaScript bundle
+        # The check that matters for the mobile app on CI. Typecheck and unit tests run in
+        # the quality job, but neither exercises Metro — and Metro is where a monorepo
+        # resolution mistake actually shows up. It also catches an import that typechecks
+        # against a package's types while its runtime entry point resolves to nothing.
+        #
+        # Producing signed .ipa/.apk binaries needs Xcode and the Android SDK and happens
+        # on EAS Build, not here.
+        run: npm run bundle:check -w @badminton/mobile
+
+      - name: Check the bundle is not unexpectedly large
+        # A guard against accidentally importing something enormous — a full icon font, a
+        # date library, a charting engine — which on mobile is download size and cold
+        # start, not just disk.
+        run: |
+          BYTES=$(find apps/mobile/.expo-bundle-check -name '*.hbc' -printf '%s\n' | sort -rn | head -1)
+          echo "Largest bundle: $((BYTES / 1024 / 1024)) MB"
+          if [ "$BYTES" -gt 12582912 ]; then
+            echo "::error::The JavaScript bundle exceeds 12 MB. Check what was added."
+            exit 1
+          fi
+
   # The gate a branch protection rule points at: one required check rather than six,
   # so adding a job later does not mean editing repository settings.
   ci:
     name: CI
     runs-on: ubuntu-latest
-    needs: [static, integration, e2e, docker]
+    needs: [static, integration, e2e, docker, mobile]
     if: always()
     steps:
       - name: Verify every job succeeded

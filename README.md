@@ -22,6 +22,13 @@ in the product is downstream of that.
 - Badminton-aware validation: 21-19 and 30-29 are accepted, 21-20 and 23-19 are not.
 - CSV import with a row-by-row preview, and CSV/JSON export of everything.
 
+**On a phone**
+
+- Records a match in about twenty seconds, at the side of a court, with **no signal**.
+- Saves locally and syncs itself later; a lost response cannot duplicate a match.
+- The full history, dashboard and analytics available offline, computed on the device.
+- Optional Face ID / fingerprint lock, and reminders you have to ask for.
+
 **Analysis**
 
 - Dashboard answering, in order: how much am I playing, am I winning, am I improving.
@@ -38,13 +45,14 @@ in the product is downstream of that.
 ## Architecture at a glance
 
 ```
-apps/web    Next.js 15 · React 19 · Tailwind      the interface
-apps/api    NestJS 11 · Prisma · PostgreSQL 16    the authority
-packages/contracts    zod schemas, enums, scoring rules — shared by both
+apps/web       Next.js 15 · React 19 · Tailwind        the interface
+apps/mobile    Expo 57 · React Native · SQLite         the interface, offline
+apps/api       NestJS 11 · Prisma · PostgreSQL 16      the authority
+packages/contracts    zod schemas, enums, scoring rules — shared by all three
 packages/analytics    pure, deterministic analytics — no framework, no database
 ```
 
-Three principles run through the whole codebase:
+Four principles run through the whole codebase:
 
 **Raw match data is the source of truth.** Games hold the scores; every statistic is
 derived from them. A handful of derived values are stored for query performance, and
@@ -57,6 +65,11 @@ derived from them. A handful of derived values are stored for query performance,
 **Unknown is not zero.** A rate with a zero denominator is `null` everywhere, and the
 interface renders it as an em dash. A player with no matches has an _unknown_ win rate,
 not a 0% one.
+
+**The phone cannot disagree with the website.** `packages/analytics` is framework-free
+and does no I/O, so the same `aggregate()` runs in Node on the server and in Hermes on
+the phone. The mobile app computes its dashboard locally — which is what lets it work
+with no signal — and gets the same answer the API would have given.
 
 Full detail in [`docs/architecture.md`](docs/architecture.md).
 
@@ -118,6 +131,17 @@ npm run dev:api     # http://localhost:4000  (docs at /api/docs)
 npm run dev:web     # http://localhost:3000
 ```
 
+### 5. Run it on a phone (optional)
+
+```bash
+npm run dev:mobile  # Metro, with a QR code — scan it with Expo Go
+```
+
+A simulator shares your machine's network stack and reaches `localhost` fine. A physical
+phone does not: copy the LAN address Metro prints into `apps/mobile/.env.local` as
+`EXPO_PUBLIC_API_URL`. Getting this wrong looks exactly like the phone being offline,
+which sends you debugging the wrong thing. See [`docs/mobile.md`](docs/mobile.md).
+
 Or the whole stack in containers:
 
 ```bash
@@ -178,6 +202,7 @@ See [`docs/testing.md`](docs/testing.md).
 | [analytics.md](docs/analytics.md)       | **Every formula, written out** — win rate, consistency, Elo, insights |
 | [security.md](docs/security.md)         | Threat model, controls, pre-deployment checklist, known gaps          |
 | [deployment.md](docs/deployment.md)     | Recommended production architecture and why, environments, backups    |
+| [mobile.md](docs/mobile.md)             | The offline design, sync protocol, EAS builds, OTA updates            |
 | [testing.md](docs/testing.md)           | Strategy, how to run each layer, what is covered                      |
 | [roadmap.md](docs/roadmap.md)           | What is built, what is deliberately deferred                          |
 

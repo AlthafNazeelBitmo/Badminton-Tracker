@@ -3,31 +3,48 @@
 ## The shape of it
 
 ```
-                    ┌──────────────────────────────┐
-  browser ────────► │  apps/web — Next.js 15        │
-                    │  React 19 · Tailwind · SWR    │
-                    └──────────────┬───────────────┘
-                                   │ HTTPS, httpOnly cookies
-                    ┌──────────────▼───────────────┐
-                    │  apps/api — NestJS 11         │
-                    │  /api/v1, zod validation      │
-                    │  ┌─────────────────────────┐  │
-                    │  │ Controller              │  │  HTTP only
-                    │  │   → Service             │  │  business rules
-                    │  │     → Prisma            │  │  data access
-                    │  └─────────────────────────┘  │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │  PostgreSQL 16                │
-                    │  raw matches = source of truth│
-                    └──────────────────────────────┘
+          ┌───────────────────────────┐   ┌────────────────────────────────┐
+ browser ►│  apps/web — Next.js 15    │   │  apps/mobile — Expo 57         │◄ phone
+          │  React 19 · Tailwind · SWR│   │  React Native · SQLite         │
+          └─────────────┬─────────────┘   │  ┌──────────────────────────┐  │
+                        │                 │  │ local cache   (readable  │  │
+       HTTPS, httpOnly cookies            │  │               offline)   │  │
+                        │                 │  │ outbox        (writable  │  │
+                        │                 │  │               offline)   │  │
+                        │                 │  └──────────────────────────┘  │
+                        │                 └─────────────┬──────────────────┘
+                        │                               │ HTTPS, bearer token
+                        │                               │ + Idempotency-Key
+          ┌─────────────▼───────────────────────────────▼──────────────────┐
+          │  apps/api — NestJS 11 · /api/v1 · zod validation                │
+          │  ┌──────────────────────────────────────────────────────────┐  │
+          │  │ Controller  → Service  → Prisma                          │  │
+          │  │ HTTP only     rules      data access                     │  │
+          │  └──────────────────────────────────────────────────────────┘  │
+          └─────────────────────────────┬──────────────────────────────────┘
+                                        │
+                        ┌───────────────▼────────────────┐
+                        │  PostgreSQL 16                 │
+                        │  raw matches = source of truth │
+                        └────────────────────────────────┘
 
-  packages/contracts   zod schemas · enums · scoring rules   (api + web)
-  packages/analytics   pure formulas, no framework            (api only)
+  packages/contracts   zod schemas · enums · scoring rules   (api + web + mobile)
+  packages/analytics   pure formulas, no framework            (api + mobile)
 ```
 
-The web app never computes a statistic. It renders what the API returns.
+The web app never computes a statistic; it renders what the API returns.
+
+The mobile app is the deliberate exception, and the reason is not performance. It has to
+work in a sports hall with no signal, and it has to include the match recorded thirty
+seconds ago that the server has not seen yet — a fetched figure would be unavailable in
+the first case and wrong in the second. So it runs `aggregate()` locally over its own
+cache.
+
+That is only safe because the analytics package is framework-free and does no I/O: the
+same function runs in Node on the server and in Hermes on the phone, over the same raw
+matches, and gives the same answer. Had the formulas lived inside the API's service
+layer, the mobile app would have had to reimplement them — and two implementations of
+"win rate" drift apart the first time one of them is corrected.
 
 ---
 
@@ -35,11 +52,16 @@ The web app never computes a statistic. It renders what the API returns.
 
 ### `packages/contracts`
 
-Zod schemas, domain enums and the scoring rules, imported by **both** applications.
+Zod schemas, domain enums and the scoring rules, imported by **all three** applications.
 
-A validation rule written once is enforced in both places. The web form rejects 21-20
-before the request is sent; the API rejects it again on arrival. Those two checks cannot
-disagree, because they are the same object.
+A validation rule written once is enforced everywhere. The web form rejects 21-20 before
+the request is sent, the mobile app rejects it before the match is even queued, and the
+API rejects it again on arrival. Those three checks cannot disagree, because they are the
+same object.
+
+The mobile case is the one that matters most: a queued match rejected by the server
+surfaces minutes later, when the user is no longer at the court and cannot remember what
+the real score was. Validating on the device turns that into an immediate correction.
 
 It also holds the response types, so a change to an API payload is a compile error in the
 web app rather than a runtime surprise.
@@ -53,7 +75,7 @@ without a database; they can be recomputed from raw data whenever a formula chan
 there is exactly one implementation of "win rate" in the system.
 
 The API layer's only job around analytics is to load the right matches, call the engine,
-and attach display names.
+and attach display names. The mobile app does the same thing against its local cache.
 
 ---
 

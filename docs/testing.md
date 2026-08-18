@@ -1,19 +1,38 @@
 # Testing
 
-Three layers, each doing something the others cannot. The aim is meaningful coverage of
+Four layers, each doing something the others cannot. The aim is meaningful coverage of
 the things that would actually hurt, not a coverage percentage.
 
-| Layer       | Where                                    | Needs        | Speed | Covers                                      |
-| ----------- | ---------------------------------------- | ------------ | ----- | ------------------------------------------- |
-| Unit        | `packages/analytics/src`, `apps/api/src` | Nothing      | ~1s   | Formulas, scoring rules, CSV                |
-| Integration | `apps/api/test`                          | PostgreSQL   | ~40s  | HTTP surface, auth, ownership, transactions |
-| End-to-end  | `apps/web/e2e`                           | Both servers | ~10s  | Real browser journeys                       |
+| Layer       | Where                            | Needs        | Speed | Covers                                      |
+| ----------- | -------------------------------- | ------------ | ----- | ------------------------------------------- |
+| Unit        | `packages/*/src`, `apps/api/src` | Nothing      | ~1s   | Formulas, scoring rules, CSV                |
+| Mobile      | `apps/mobile/src`                | Nothing      | ~2s   | Outbox, sync engine, local SQL, app lock    |
+| Integration | `apps/api/test`                  | PostgreSQL   | ~45s  | HTTP surface, auth, ownership, transactions |
+| End-to-end  | `apps/web/e2e`                   | Both servers | ~10s  | Real browser journeys                       |
 
 ```bash
-npm test                                # unit, everywhere
+npm test                                # unit, every workspace
 npm run test:e2e -w @badminton/api      # integration
 npm run test:e2e -w @badminton/web      # browser
+npm run bundle:check -w @badminton/mobile   # Metro actually resolves everything
 ```
+
+### The mobile layer runs against real SQL
+
+`expo-sqlite` is a native module with no JavaScript implementation, so it cannot run under
+Jest. The obvious answer is to mock it — but a mocked database cannot have the bugs this
+layer needs tested: a comparison against a string date, an index that is never used, a
+transaction that fails to roll back.
+
+So it is backed by Node 22's built-in SQLite instead (`apps/mobile/src/testing/expo-sqlite-node.ts`).
+The SQL is executed by a real engine; only the wrapper differs. What that does **not**
+cover is native-side behaviour — WAL mode, platform file locking, the async driver's own
+queueing — which still needs a device.
+
+`bundle:check` is the check CI cares most about for the mobile app. Typecheck and unit
+tests never exercise Metro, and Metro is where a monorepo resolution mistake actually
+surfaces. It also catches an import that typechecks against a package's types while its
+runtime entry point resolves to nothing.
 
 ---
 
@@ -117,7 +136,7 @@ npm run test:e2e -w @badminton/web
 
 ## CI
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs four jobs in parallel:
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs five jobs in parallel:
 
 | Job           | Does                                                                           |
 | ------------- | ------------------------------------------------------------------------------ |
@@ -125,9 +144,15 @@ npm run test:e2e -w @badminton/web
 | `integration` | Migrations against PostgreSQL, schema/migration drift check, integration suite |
 | `e2e`         | Builds both apps, starts them, runs Playwright                                 |
 | `docker`      | Builds both images with layer caching                                          |
+| `mobile`      | Exports the JavaScript bundle through Metro, and checks its size               |
 
-A final `ci` job depends on all four, so branch protection points at one required check
+A final `ci` job depends on all five, so branch protection points at one required check
 and adding a job later does not mean editing repository settings.
+
+The `mobile` job fails the build if the bundle exceeds 12 MB. That guards against
+accidentally importing something enormous — a full icon font, a date library, a charting
+engine — which on a phone is download size and cold-start time, not just disk. Signed
+`.ipa`/`.apk` binaries need Xcode and the Android SDK and are built on EAS, not here.
 
 The drift check is worth calling out: `prisma migrate diff --exit-code` fails if the
 schema and the migrations have diverged. A schema edited without a matching migration is a
