@@ -83,8 +83,15 @@ export default tseslint.config(
     // declared or every `describe` reads as an undefined variable. The API and web
     // suites use Vitest, which is imported explicitly and needs none of this.
     files: ['apps/mobile/**/*.{test,spec}.{ts,tsx}', 'apps/mobile/jest.setup.js'],
+    rules: {
+      // Jest's module factories must be lazy — an ES import would be hoisted above the
+      // `jest.mock` call it belongs to — so `require` is the only option here.
+      '@typescript-eslint/no-require-imports': 'off',
+    },
     languageOptions: {
       globals: {
+        require: 'readonly',
+        module: 'readonly',
         jest: 'readonly',
         describe: 'readonly',
         it: 'readonly',

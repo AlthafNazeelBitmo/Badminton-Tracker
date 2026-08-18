@@ -323,7 +323,16 @@ export class PlayersService {
       }
 
       const fresh = await tx.player.create({
-        data: { userId, name, normalizedName, relationship: 'OTHER' },
+        // Honoured only on creation. When the name already belonged to somebody the
+        // branch above returned that player instead, because two records for one person
+        // would split every statistic about them — the client reconciles on its next sync.
+        data: {
+          ...(ref.id ? { id: ref.id } : {}),
+          userId,
+          name,
+          normalizedName,
+          relationship: 'OTHER',
+        },
         select: { id: true },
       });
       playerIds.push(fresh.id);

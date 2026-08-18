@@ -80,6 +80,9 @@ export class MatchesService {
 
       const created = await tx.match.create({
         data: {
+          // Adopting the client's id is what keeps an offline device's local copy and the
+          // server's record the same row rather than two.
+          ...(input.id ? { id: input.id } : {}),
           userId,
           sessionId,
           playedAt,
@@ -523,7 +526,15 @@ export class MatchesService {
     if (existing) return existing.id;
 
     const created = await tx.session.create({
-      data: { userId, date, venueId, sessionType: draft.sessionType },
+      // An offline client assigns the id so the match it queues alongside can reference
+      // the session immediately. Only used when no existing session was reused above.
+      data: {
+        userId,
+        date,
+        venueId,
+        sessionType: draft.sessionType,
+        ...(draft.id ? { id: draft.id } : {}),
+      },
       select: { id: true },
     });
     return created.id;

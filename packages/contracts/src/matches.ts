@@ -35,6 +35,12 @@ export const inlineSessionSchema = z.object({
   venueId: uuidSchema.nullable().optional(),
   venueName: trimmedString(1, 120).optional(),
   sessionType: z.enum(SESSION_TYPES).default('CASUAL'),
+  /**
+   * Client-assigned id, for a session created offline. Ignored when an existing session
+   * for the same day and venue is reused, which is the more useful behaviour: two matches
+   * on the same evening belong to one session.
+   */
+  id: uuidSchema.optional(),
 });
 export type InlineSessionInput = z.infer<typeof inlineSessionSchema>;
 
@@ -82,6 +88,18 @@ export const createMatchSchema = matchCoreSchema
   .extend({
     sessionId: uuidSchema.optional(),
     session: inlineSessionSchema.optional(),
+    /**
+     * Client-assigned id, for a match recorded offline.
+     *
+     * The offline client stores the match locally under this id and queues the request.
+     * Were the server to assign its own instead, the next sync would return the same
+     * match under a different id and the device would show it twice — once as its local
+     * copy and once as the server's. Adopting the client's id makes the two the same row.
+     *
+     * Rejected with a conflict if already taken, which for a version-4 UUID means the
+     * client is retrying without an idempotency key rather than that ids have collided.
+     */
+    id: uuidSchema.optional(),
   })
   .refine(hasCorrectPartnerCount, PARTNER_COUNT_ERROR)
   .refine(hasCorrectOpponentCount, OPPONENT_COUNT_ERROR)

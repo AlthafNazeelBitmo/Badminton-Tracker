@@ -263,6 +263,129 @@ describe('native client support', () => {
     });
   });
 
+  describe('client-assigned ids', () => {
+    // A phone with no signal must name a new opponent and reference them from the match
+    // in the same request. It cannot wait for the server to issue ids, so it assigns them
+    // and the server adopts them — otherwise the next sync returns the same match under a
+    // different id and the device shows it twice.
+    const matchId = '11111111-2222-4333-8444-555555555555';
+    const opponentId = '66666666-7777-4888-8999-aaaaaaaaaaaa';
+    const sessionId = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+
+    it('adopts the ids the client assigned', async () => {
+      const user = await registerUser(context);
+
+      const created = await user.agent
+        .post('/api/v1/matches')
+        .send({
+          id: matchId,
+          discipline: 'SINGLES',
+          session: { id: sessionId, date: '2026-08-01', sessionType: 'CASUAL' },
+          partners: [],
+          opponents: [{ name: 'Offline Opponent', id: opponentId }],
+          games: [
+            { myScore: 21, opponentScore: 15 },
+            { myScore: 21, opponentScore: 12 },
+          ],
+        })
+        .expect(201);
+
+      expect(created.body.id).toBe(matchId);
+      expect(created.body.sessionId).toBe(sessionId);
+
+      // And the sync feed agrees, which is what the device actually reads.
+      const pull = await user.agent.get('/api/v1/sync/pull').expect(200);
+      const [synced] = pull.body.changed.matches;
+      expect(synced.id).toBe(matchId);
+      expect(synced.opponentIds).toEqual([opponentId]);
+    });
+
+    it('keeps the existing player when the name is already known', async () => {
+      const user = await registerUser(context);
+
+      const first = await user.agent
+        .post('/api/v1/matches')
+        .send({ ...matchBody, opponents: [{ name: 'Priya' }] })
+        .expect(201);
+      const existingId = first.body.opponents[0].playerId;
+
+      // A device that was offline does not know Priya already exists and assigns its own
+      // id. Honouring it would create a second Priya — matched case-insensitively here —
+      // and split every statistic about her across the two.
+      const second = await user.agent
+        .post('/api/v1/matches')
+        .send({
+          ...matchBody,
+          opponents: [{ name: 'priya', id: opponentId }],
+        })
+        .expect(201);
+
+      expect(second.body.opponents[0].playerId).toBe(existingId);
+      expect(second.body.opponents[0].playerId).not.toBe(opponentId);
+
+      const players = await user.agent.get('/api/v1/players').expect(200);
+      expect(
+        players.body.items.filter((p: { name: string }) => /priya/i.test(p.name)),
+      ).toHaveLength(1);
+    });
+
+    it('reuses the session for the same day and venue rather than the supplied id', async () => {
+      const user = await registerUser(context);
+
+      const first = await user.agent
+        .post('/api/v1/matches')
+        .send({ ...matchBody, session: { date: '2026-08-01', sessionType: 'CASUAL' } })
+        .expect(201);
+
+      const second = await user.agent
+        .post('/api/v1/matches')
+        .send({
+          ...matchBody,
+          opponents: [{ name: 'Second Opponent' }],
+          session: { id: sessionId, date: '2026-08-01', sessionType: 'CASUAL' },
+        })
+        .expect(201);
+
+      // Two matches on the same evening are one session. That is more useful than
+      // honouring an id the device invented in ignorance of the first match.
+      expect(second.body.sessionId).toBe(first.body.sessionId);
+      expect(second.body.sessionId).not.toBe(sessionId);
+    });
+
+    it('rejects a client id already in use', async () => {
+      const user = await registerUser(context);
+
+      await user.agent
+        .post('/api/v1/matches')
+        .send({ ...matchBody, id: matchId })
+        .expect(201);
+
+      // Without an idempotency key there is nothing to recognise this as a replay, so a
+      // conflict is the honest answer rather than silently creating a second match.
+      await user.agent
+        .post('/api/v1/matches')
+        .send({ ...matchBody, id: matchId, opponents: [{ name: 'Someone Else' }] })
+        .expect(409);
+    });
+
+    it('refuses a client id alongside an existing player id', async () => {
+      const user = await registerUser(context);
+      const existing = await user.agent
+        .post('/api/v1/players')
+        .send({ name: 'Known Player' })
+        .expect(201);
+
+      // The two mean contradictory things: "use this player" and "create one with this id".
+      await user.agent
+        .post('/api/v1/matches')
+        .send({
+          ...matchBody,
+          opponents: [{ playerId: existing.body.id, id: opponentId }],
+        })
+        .expect(422);
+    });
+  });
+
   describe('devices', () => {
     const device = {
       installationId: 'installation-aaaaaaaaaaaaaaaa',

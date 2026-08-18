@@ -34,14 +34,28 @@ export type ListPlayersQuery = z.infer<typeof listPlayersSchema>;
  * Reference to a player during fast match entry: either an existing id, or a name that
  * the API resolves case-insensitively and creates on demand. This is what makes
  * "played John & Ahmed" a single request.
+ *
+ * `id` exists for offline clients. A phone with no signal has to name a brand-new
+ * opponent *and* reference them from the match in the same breath, which it cannot do if
+ * the id only arrives with the server's reply. So it assigns one and the server adopts
+ * it, and the ids agree from the outset with nothing to renumber later.
+ *
+ * The server may still decline to use it — if the name already belongs to someone, that
+ * existing player wins, because two records for one person would split every statistic
+ * about them. The client finds out on the next sync and reconciles.
  */
 export const playerRefSchema = z
   .object({
     playerId: uuidSchema.optional(),
     name: trimmedString(1, 80).optional(),
+    id: uuidSchema.optional(),
   })
   .refine((value) => Boolean(value.playerId) !== Boolean(value.name), {
     message: 'Provide either an existing playerId or a name, not both.',
+  })
+  .refine((value) => !(value.id && value.playerId), {
+    message: 'A client-assigned id applies only when creating a player from a name.',
+    path: ['id'],
   });
 export type PlayerRef = z.infer<typeof playerRefSchema>;
 

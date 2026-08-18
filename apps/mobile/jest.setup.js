@@ -112,3 +112,21 @@ jest.mock('expo-router', () => ({
   Redirect: 'Redirect',
   SplashScreen: { preventAutoHideAsync: jest.fn(), hideAsync: jest.fn() },
 }));
+
+// `expo-sqlite` is a native module with no JavaScript implementation, so it cannot run
+// under Jest. Rather than mock the database away — a mock cannot have the SQL bugs this
+// layer needs tested — it is backed by Node's built-in SQLite. See the adapter's own
+// comment for what that does and does not cover.
+jest.mock('expo-sqlite', () => require('./src/testing/expo-sqlite-node'));
+
+// `expo-crypto` is native too, but its job is small and exactly reproducible in Node, so
+// this is the real thing rather than a stand-in: outbox tests assert that ids and
+// idempotency keys are distinct, which a stubbed generator would make meaningless.
+jest.mock('expo-crypto', () => {
+  const { randomUUID, randomBytes } = require('node:crypto');
+  return {
+    randomUUID: () => randomUUID(),
+    getRandomBytes: (count) => new Uint8Array(randomBytes(count)),
+    getRandomBytesAsync: async (count) => new Uint8Array(randomBytes(count)),
+  };
+});
