@@ -12,6 +12,7 @@ import { onSessionLost, request } from '../api/client';
 import { clearTokens, readTokens, saveTokens } from '../storage/secure-tokens';
 import { clearLocalData } from '../db/database';
 import { resetSyncCursor } from '../sync/engine';
+import { loadServerAddress } from '../server-address';
 
 /**
  * Who is signed in.
@@ -71,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     let cancelled = false;
 
     void (async () => {
+      // Before anything talks to the API: a preview build may have been pointed at a
+      // different server than the one compiled into it.
+      await loadServerAddress();
       const tokens = await readTokens();
       if (!tokens) {
         if (!cancelled) setStatus('signed-out');

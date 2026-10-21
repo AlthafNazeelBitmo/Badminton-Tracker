@@ -80,7 +80,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // No location, contacts, camera or storage: the app records scores and nothing else,
     // and every permission it does not ask for is one it cannot leak.
     permissions: ['USE_BIOMETRIC', 'USE_FINGERPRINT', 'VIBRATE', 'RECEIVE_BOOT_COMPLETED'],
-    blockedPermissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', 'RECORD_AUDIO'],
+    // Expo's template also adds storage access and drawing over other apps. The app
+    // keeps everything in its own database and never draws outside itself, so both are
+    // removed — the comment above should be true of the shipped manifest, not just of
+    // the list we asked for.
+    blockedPermissions: [
+      'ACCESS_COARSE_LOCATION',
+      'ACCESS_FINE_LOCATION',
+      'RECORD_AUDIO',
+      'READ_EXTERNAL_STORAGE',
+      'WRITE_EXTERNAL_STORAGE',
+      'SYSTEM_ALERT_WINDOW',
+    ],
   },
 
   web: { bundler: 'metro', output: 'static', favicon: './assets/favicon.png' },
@@ -108,7 +119,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-build-properties',
       {
         ios: { deploymentTarget: '16.4' },
-        android: { minSdkVersion: 24, compileSdkVersion: 36, targetSdkVersion: 36 },
+        android: {
+          minSdkVersion: 24,
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
+          // Android refuses plain-HTTP connections from an installed app. A development
+          // or preview build has to reach an API on a laptop over the local network,
+          // which has no certificate; the store build talks only to its HTTPS API and
+          // keeps the platform default.
+          usesCleartextTraffic: VARIANT !== 'production',
+        },
       },
     ],
   ],

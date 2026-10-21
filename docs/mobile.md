@@ -42,6 +42,47 @@ cd apps/mobile
 npx eas build --profile development --platform ios     # or android
 ```
 
+### Expo Go and the SDK version
+
+The store version of Expo Go runs only the newest Expo SDK. This app is on SDK 57; once
+Expo releases a newer SDK, the store's Expo Go reports the project as incompatible. On
+Android, an Expo Go build for an older SDK can be installed from
+[expo.dev/go](https://expo.dev/go). On an iPhone it cannot, so either upgrade the project
+or use an installed build.
+
+### An installable APK, without Expo Go
+
+A **preview** build is an ordinary app: install the APK and open it, with no Expo Go and
+no Metro. Two things differ from a store build so it can reach an API on your laptop:
+
+- **The sign-in screen has a Server field.** Type the laptop's address on your Wi-Fi —
+  `192.168.1.23:4000` — and the app remembers it. An APK cannot have that address compiled
+  in, because nobody knows it when the APK is built. The field does not exist in a store
+  build: there, the API address is fixed, because a field that sends sign-in to any server
+  is a phishing aid in an app real accounts use.
+- **Plain HTTP is allowed.** Android refuses `http://` from installed apps by default, and
+  a laptop on the local network has no certificate. The store build keeps the default.
+
+Build one on a machine with the Android SDK and JDK 17+:
+
+```bash
+cd apps/mobile
+APP_VARIANT=preview npx expo prebuild --platform android --clean
+cd android
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+# → android/app/build/outputs/apk/release/app-release.apk
+```
+
+Or in the cloud, with an Expo account: `npx eas build --profile preview --platform android`.
+
+A locally built release APK is signed with the debug key. Android installs it once you
+allow installs from that source, and Play Protect may warn that it does not recognise the
+developer — expected for an app that is not from the Play Store. It installs as
+"Badminton (Preview)", alongside a store build rather than over it.
+
+Push reminders need an EAS project and Firebase credentials, so they stay unavailable in a
+locally built APK. The fingerprint and face unlock work.
+
 ## How offline works
 
 Three pieces, each doing one job.

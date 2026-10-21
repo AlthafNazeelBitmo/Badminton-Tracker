@@ -6,7 +6,7 @@ import { usePalette } from '@/theme/theme';
 import { spacing, typography } from '@/theme/tokens';
 import { Button, Field, ScreenTitle } from '@/components/ui';
 import { useAuth } from '@/lib/auth/auth-store';
-import { describeError } from '@/lib/api/errors';
+import { useServerField } from '@/components/server-field';
 
 export default function SignInScreen(): React.JSX.Element {
   const palette = usePalette();
@@ -17,14 +17,16 @@ export default function SignInScreen(): React.JSX.Element {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const server = useServerField();
 
   const submit = async () => {
     setError(null);
     setBusy(true);
     try {
+      if (!(await server.apply())) return;
       await signIn(email.trim(), password);
     } catch (failure) {
-      setError(describeError(failure));
+      setError(server.explain(failure));
     } finally {
       setBusy(false);
     }
@@ -42,6 +44,8 @@ export default function SignInScreen(): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
       >
         <ScreenTitle title="Badminton Tracker" subtitle="Sign in to your account" />
+
+        {server.field}
 
         <Field
           label="Email"

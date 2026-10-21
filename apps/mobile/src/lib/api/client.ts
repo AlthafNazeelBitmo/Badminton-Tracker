@@ -1,6 +1,6 @@
 import { CLIENT_KIND_HEADER, IDEMPOTENCY_KEY_HEADER } from './headers';
 import { ApiError, CancelledError, NetworkError } from './errors';
-import { config } from '../config';
+import { apiUrl } from '../server-address';
 import { clearTokens, readTokens, saveTokens, type StoredTokens } from '../storage/secure-tokens';
 
 /**
@@ -83,7 +83,7 @@ async function send(
 ): Promise<Response> {
   const { method = 'GET', body, query, idempotencyKey, signal, timeoutMs } = options;
 
-  const url = new URL(`${config.apiUrl}${path.startsWith('/') ? path : `/${path}`}`);
+  const url = new URL(`${apiUrl()}${path.startsWith('/') ? path : `/${path}`}`);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
   }
@@ -170,7 +170,7 @@ async function refreshSession(): Promise<StoredTokens | null> {
       const current = await readTokens();
       if (!current) return null;
 
-      const response = await fetch(`${config.apiUrl}/auth/refresh`, {
+      const response = await fetch(`${apiUrl()}/auth/refresh`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
