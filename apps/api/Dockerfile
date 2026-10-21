@@ -15,17 +15,20 @@ COPY package.json package-lock.json ./
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/analytics/package.json packages/analytics/
 COPY apps/api/package.json apps/api/
-COPY apps/web/package.json apps/web/
 
-RUN npm ci --workspaces --include-workspace-root
+# Only the API's dependency tree. Installing every workspace would pull the mobile app's
+# React Native toolchain and the web app's Next.js into a server image that uses neither.
+RUN npm ci --workspace @badminton/api --include-workspace-root
 
 # --- Stage 2: build ---------------------------------------------------------
 FROM node:22-alpine AS build
 WORKDIR /repo
 
-COPY --from=deps /repo/node_modules ./node_modules
-COPY --from=deps /repo/packages/contracts/node_modules ./packages/contracts/node_modules
-COPY --from=deps /repo/packages/analytics/node_modules ./packages/analytics/node_modules
+# The whole installed tree, rather than a list of node_modules folders. Where npm puts
+# a package — hoisted to the root or nested under a workspace — depends on the lockfile,
+# and naming folders that a clean install happens not to create fails the build.
+COPY --from=deps /repo ./
+# `.dockerignore` keeps the host's node_modules and .env out of this copy.
 COPY . .
 
 RUN npm run build -w @badminton/contracts \
@@ -33,8 +36,10 @@ RUN npm run build -w @badminton/contracts \
  && npx prisma generate --schema apps/api/prisma/schema.prisma \
  && npm run build -w @badminton/api
 
-# Drop dev dependencies before they are copied into the runtime image.
-RUN npm prune --omit=dev --workspaces --include-workspace-root
+# Drop dev dependencies before they are copied into the runtime image. The workspace
+# folder is created if npm hoisted everything, so the runtime stage can always copy it.
+RUN npm prune --omit=dev --workspace @badminton/api --include-workspace-root \
+ && mkdir -p apps/api/node_modules
 
 # --- Stage 3: runtime -------------------------------------------------------
 FROM node:22-alpine AS runtime
@@ -55,6 +60,7 @@ COPY --from=build --chown=app:app /repo/packages/analytics/dist ./packages/analy
 COPY --from=build --chown=app:app /repo/packages/analytics/package.json ./packages/analytics/package.json
 COPY --from=build --chown=app:app /repo/apps/api/dist ./apps/api/dist
 COPY --from=build --chown=app:app /repo/apps/api/package.json ./apps/api/package.json
+COPY --from=build --chown=app:app /repo/apps/api/node_modules ./apps/api/node_modules
 # Migrations ship with the image so a deployment can apply exactly the schema it expects.
 COPY --from=build --chown=app:app /repo/apps/api/prisma ./apps/api/prisma
 

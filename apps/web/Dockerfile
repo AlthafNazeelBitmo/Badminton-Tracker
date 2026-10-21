@@ -11,10 +11,10 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/analytics/package.json packages/analytics/
-COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 
-RUN npm ci --workspaces --include-workspace-root
+# Only the web app's dependency tree, not the API's or the mobile app's.
+RUN npm ci --workspace @badminton/web --include-workspace-root
 
 FROM node:22-alpine AS build
 WORKDIR /repo
@@ -25,9 +25,9 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:4000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=deps /repo/node_modules ./node_modules
-COPY --from=deps /repo/packages/contracts/node_modules ./packages/contracts/node_modules
-COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
+# The whole installed tree, rather than a list of node_modules folders a clean install
+# may not create. `.dockerignore` keeps the host's node_modules and .env out of the next copy.
+COPY --from=deps /repo ./
 COPY . .
 
 RUN npm run build -w @badminton/contracts \

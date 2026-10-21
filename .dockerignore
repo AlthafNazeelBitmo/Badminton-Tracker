@@ -1,0 +1,27 @@
+# Excluded from the Docker build context, for both images.
+#
+# `node_modules` matters most: the build stage installs its own, and a host copy laid on
+# top would overwrite it with binaries built for a different platform. `.env` is a secret
+# and has no business in an image layer, even one that is not shipped.
+
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.vite
+**/.cache
+**/.turbo
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+**/*.log
+
+.git
+.github
+.env
+.env.*
+!.env.example
+secrets/
+
+# Neither image builds the mobile app.
+apps/mobile

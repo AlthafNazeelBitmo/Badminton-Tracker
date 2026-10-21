@@ -93,7 +93,13 @@ jobs:
       - name: Verify migrations match the schema
         # A schema edited without a matching migration is a deployment that will fail
         # in production; catch it here instead.
-        run: npx prisma migrate diff --from-migrations apps/api/prisma/migrations --to-schema-datamodel apps/api/prisma/schema.prisma --shadow-database-url "$DATABASE_URL" --exit-code
+        #
+        # The shadow database must not be the test database. Prisma resets whatever it
+        # is given as a shadow, which here dropped the migration history table but left
+        # the tables, and the suite's own `migrate deploy` then refused the non-empty
+        # database (P3005) before a single test ran. The server's default `postgres`
+        # database is empty and unused by this job, so it is a safe scratch space.
+        run: npx prisma migrate diff --from-migrations apps/api/prisma/migrations --to-schema-datamodel apps/api/prisma/schema.prisma --shadow-database-url "postgresql://postgres:postgres@localhost:5432/postgres" --exit-code
         continue-on-error: false
 
       - name: Integration tests
