@@ -16,3 +16,6 @@ process.env.ENABLE_SWAGGER = 'false';
 // auth limits would reject. The limiter itself is covered by rate-limit.e2e.test.ts,
 // which boots its own app with limiting switched back on.
 process.env.RATE_LIMIT_ENABLED = 'false';
+// Jobs are driven explicitly by the tests that cover them, so a timer firing half-way
+// through an unrelated test cannot change what that test observes.
+process.env.BACKGROUND_JOBS_ENABLED = 'false';

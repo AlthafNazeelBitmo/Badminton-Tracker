@@ -65,6 +65,22 @@ export const envSchema = z
 
     ENABLE_SWAGGER: booleanish.default(true),
     ALLOW_REGISTRATION: booleanish.default(true),
+
+    /**
+     * Runs reminders and housekeeping on timers inside the API process.
+     *
+     * Turn off where the process does not stay up between requests — a platform that
+     * scales to zero — and run `npm run jobs -w @badminton/api` from the platform's
+     * scheduler instead. Both paths are safe on several instances at once: each job
+     * claims its work with a conditional update, so two runners cannot send the same
+     * reminder.
+     */
+    BACKGROUND_JOBS_ENABLED: booleanish.default(true),
+    /**
+     * Optional Expo access token. Only needed if "enhanced push security" is switched on
+     * for the Expo project; without it, Expo accepts pushes to any valid token.
+     */
+    EXPO_ACCESS_TOKEN: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;

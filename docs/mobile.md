@@ -115,13 +115,39 @@ send, which on a phone is battery spent for nothing.
 
 ### Deletions
 
-Not tracked with tombstones. Each pull returns the server's authoritative record counts;
-when the device holds _more_ than the server says exists, something was deleted elsewhere
-and the client re-pulls from scratch.
+Not tracked with tombstones. Each completed pull returns the server's record counts. When
+the device holds _more confirmed records_ than the server says exist, something was
+deleted elsewhere, so the app fetches `GET /sync/manifest` — every id the server holds,
+ids only — and drops whatever is missing from it.
+
+Two rules keep that safe:
+
+- **Only confirmed rows are counted or deleted.** A match still waiting to upload is
+  missing from the manifest because the server has not seen it yet, not because anyone
+  deleted it. Counting it would read as a surplus on every sync; deleting it would lose a
+  match somebody just recorded.
+- **Only after a completed run.** Mid-run, the server's version of the data has not all
+  arrived, and the cache would be judged against half the picture.
 
 A tombstone table is the more precise answer and the right one at a scale this product
-does not have. What matters is that divergence is detectable, and counts achieve that for
-four columns instead of four tables.
+does not have. Counts make divergence cheap to detect, and the manifest is only fetched
+when they disagree.
+
+### Players named offline
+
+Name a new opponent while offline — "priya" — and the device creates a local player for
+them. If the server already knows a "Priya", it keeps her rather than splitting her
+statistics across two records, and the next pull rewrites the match to point at her. The
+local copy is then removed once no cached match refers to it. A match still waiting to
+upload keeps its new players, so nothing is removed before the server has had its say.
+
+### Retries after the server forgets a key
+
+The server keeps idempotency keys for 48 hours, and purges older ones hourly. A phone
+retrying after that gets `409 DUPLICATE` rather than a replay, because the match id it
+assigned is already taken — still exactly one match. The app looks the id up: if the match
+is there, the entry is marked delivered; if not, the refusal stands. Without that check, a
+match that _was_ saved would be reported as one that could not be.
 
 ## Client-assigned ids
 
@@ -206,7 +232,28 @@ is permanent unless they go and find the setting. Both live in settings.
 
 The device registers itself on every launch regardless. That also populates the list of
 signed-in devices, and the OS rotates push tokens: a stale one fails silently, so
-notifications just stop with nothing anywhere to say why.
+notifications just stop with nothing anywhere to say why. The token is only sent if
+reminders were switched on _in the app_ — the system permission stays granted after
+switching them off, so reading the permission alone would quietly switch them back on at
+the next launch.
+
+What gets pushed, and when, is decided on the server:
+
+- **Pushed:** two weeks without a match, a goal reached, a goal due within a week, an
+  achievement unlocked. Streaks and milestones stay in the app's notification list — they
+  fire often enough that pushing them would be chatter.
+- **Never overnight.** Only between 09:00 and 21:00 in the account's time zone; anything
+  arriving overnight waits for the morning rather than being dropped.
+- **Never twice.** Each notification is claimed with a conditional update before it is
+  sent, so two API instances, or a timer and the jobs command, cannot both send it. A
+  crash between claim and send loses that one push; the notification still appears in the
+  app. Notifications more than two days old are never pushed.
+- **Dead tokens are cleared** when Expo reports `DeviceNotRegistered`.
+
+Pushes go through Expo's push service, which forwards to APNs and FCM, so Apple's and
+Google's credentials stay in EAS rather than in the API's environment. Push requires a real
+EAS project id: with the placeholder in `app.config.ts`, the settings switch says reminders
+are unavailable rather than failing silently.
 
 The lock is honest about what it is. The device is already locked by the OS; this covers
 the narrower case of somebody handed an unlocked phone. It is a privacy screen over a

@@ -19,7 +19,8 @@
     "db:reset": "prisma migrate reset --force",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "recompute": "tsx src/cli/recompute.ts"
+    "recompute": "tsx src/cli/recompute.ts",
+    "jobs": "node dist/cli/jobs.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

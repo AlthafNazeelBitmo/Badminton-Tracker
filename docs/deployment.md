@@ -44,6 +44,19 @@ instance, move the limiter's store to Redis — the guard interface does not cha
 request. At a few thousand matches that is milliseconds. Add caching when a measurement
 says to, not before.
 
+**Background jobs run inside the API.** Reminders every 15 minutes and idempotency-key
+cleanup hourly, on timers in the API process — no separate worker to deploy. That assumes
+the process stays up. On a platform that scales to zero (Fly.io with auto-stop, Cloud Run
+with minimum instances at zero), set `BACKGROUND_JOBS_ENABLED=false` and point the
+platform's scheduler at the same image instead:
+
+```bash
+node dist/cli/jobs.js            # every 15 minutes
+```
+
+Both paths are safe to run concurrently and on several instances: each job claims its
+work with a conditional update, so nothing is sent twice.
+
 ### Platform options
 
 | Platform                       | Fit                                                                                                            |
@@ -180,6 +193,9 @@ In the order the pressure will appear:
 3. **Cache expensive analytics.** All analytics funnel through one loader, so caching has
    exactly one place to live.
 4. **Second API instance.** Move the rate limiter's store to Redis at the same time.
+   Background jobs need no change — they already claim work atomically. Reminder
+   generation does load each push-enabled user's matches every 15 minutes; past a few
+   thousand such users, generate only for those with new activity or a due date.
 5. **Read replica.** Analytics are read-only and would move cleanly.
 6. **Precomputed aggregates.** Materialised views for the heaviest breakdowns — with
    `recompute` already in place as the invalidation story.

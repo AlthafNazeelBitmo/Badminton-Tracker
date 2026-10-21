@@ -17,6 +17,8 @@ import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { DevicesModule } from './devices/devices.module';
 import { SyncModule } from './sync/sync.module';
+import { PushModule } from './push/push.module';
+import { JobsModule } from './jobs/jobs.module';
 import { HealthController } from './health/health.controller';
 import { AllExceptionsFilter } from './common/http-exception.filter';
 import { RateLimitGuard } from './common/rate-limit.guard';
@@ -55,6 +57,8 @@ import { IdempotencyInterceptor } from './common/idempotency.interceptor';
     AdminModule,
     DevicesModule,
     SyncModule,
+    PushModule,
+    JobsModule,
   ],
   controllers: [HealthController],
   providers: [

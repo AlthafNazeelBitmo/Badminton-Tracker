@@ -117,6 +117,19 @@ Rejected with 422: impossible scores (21-20, 23-19), games recorded after the ma
 decided, participant counts that do not match the discipline, and the same person on both
 sides.
 
+**Offline clients** — the mobile app — use two more things:
+
+- **`Idempotency-Key` header.** A retry with the same key and body returns the original
+  response (with `Idempotency-Replayed: true`) instead of creating a second match. The
+  same key with a different body is `409 IDEMPOTENCY_KEY_REUSED`. Keys are kept for 48
+  hours, then purged.
+- **Client-assigned ids.** `id` on the match, `session.id`, and `{ "name", "id" }` for a
+  new player, so a match recorded offline can reference a player created in the same
+  breath. The server adopts them — except when the name already belongs to someone, or a
+  session already exists for that day and venue, where the existing record wins. A match
+  id already in use is `409 DUPLICATE`, which is also what a retry arriving after its key
+  was purged receives: still exactly one match.
+
 | Method | Path           | Notes                                                                                                                                                                              |
 | ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/matches`     | Filter by date, discipline, result, session, venue, opponent, partner, tag, difficulty, free text. Sort by newest, oldest, biggest win, narrowest margin, longest, highest scoring |
@@ -173,7 +186,11 @@ Definitions for every number are in [analytics.md](analytics.md).
 | `/sessions`                    | GET, POST, PATCH, DELETE                       | Delete reports how many matches went with it                                               |
 | `/goals`                       | GET, POST, PATCH, DELETE                       | Progress computed per request, never stored                                                |
 | `/achievements`                | GET, POST `/evaluate`                          | Detection is idempotent                                                                    |
-| `/notifications`               | GET, POST `/refresh`, `/:id/read`, `/read-all` | Deduplicated by key                                                                        |
+| `/notifications`               | GET, POST `/refresh`, `/:id/read`, `/read-all` | Deduplicated by key; also generated and pushed every 15 minutes for push-enabled devices   |
+| `/devices`                     | GET, POST, DELETE `/:id`                       | POST upserts by installation id, refreshing the push token; tokens are never returned      |
+| `/sync/pull`                   | GET                                            | Delta since `since`; page with the opaque `cursor` while `hasMore` is true                 |
+| `/sync/status`                 | GET                                            | Record counts only, for a cheap consistency check                                          |
+| `/sync/manifest`               | GET                                            | Every id the caller owns; fetched when local counts exceed the server's                    |
 | `/users/me`                    | GET, PATCH                                     | Profile, preferences, default scoring format                                               |
 | `/users/me/export`             | GET                                            | Everything held about the account                                                          |
 | `/reports/performance`         | GET                                            | Full report; same filter as analytics                                                      |

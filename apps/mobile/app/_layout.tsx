@@ -8,7 +8,7 @@ import { ThemeProvider, useTheme } from '@/theme/theme';
 import { AuthProvider, useAuth } from '@/lib/auth/auth-store';
 import { SyncProvider } from '@/lib/sync/use-sync';
 import { AppLockOverlay } from '@/components/lock-gate';
-import { currentPermission, registerDevice, requestPushToken } from '@/lib/notifications/push';
+import { refreshRegistration } from '@/lib/notifications/push';
 
 // Held until the session has been read from the keychain, so the app never shows sign-in
 // for a moment before replacing it with the dashboard.
@@ -106,10 +106,7 @@ function useDeviceRegistration(signedIn: boolean): void {
   useEffect(() => {
     if (!signedIn) return;
 
-    void (async () => {
-      // Only fetches a token if permission was granted previously; this never prompts.
-      const token = (await currentPermission()) === 'granted' ? await requestPushToken() : null;
-      await registerDevice(token);
-    })();
+    // Never prompts, and sends a token only if reminders were switched on in the app.
+    void refreshRegistration();
   }, [signedIn]);
 }

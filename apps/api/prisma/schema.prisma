@@ -537,12 +537,17 @@ model Notification {
   /// Stable key preventing the same notification firing twice.
   dedupeKey String
   readAt    DateTime?
+  /// When the push for this notification was claimed for sending. Set *before* the
+  /// send, so a crash mid-send loses one push rather than repeating it — a missed
+  /// reminder is a much smaller failure than the same reminder arriving twice.
+  pushedAt  DateTime?
   createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dedupeKey])
   @@index([userId, readAt])
+  @@index([pushedAt, createdAt])
   @@map("notifications")
 }
 

@@ -16,6 +16,8 @@ interface Candidate {
 /** Milestones worth telling someone about. Anything else is noise. */
 const MATCH_MILESTONES = [10, 25, 50, 100, 250, 500, 1000];
 const INACTIVITY_DAYS = 14;
+/** Long enough to survive the job being down for a while; short enough not to dig up old wins. */
+const GOAL_ACHIEVED_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Generates notifications on demand.
@@ -105,8 +107,11 @@ export class NotificationsService {
       }
     }
 
+    // Listing active goals is also what moves a goal that has just been met to ACHIEVED,
+    // so it runs before the achieved goals are read below.
     const goals = await this.goals.list(userId, { page: 1, pageSize: 100, status: 'ACTIVE' });
     for (const goal of goals.items) {
+      if (goal.status !== 'ACTIVE') continue;
       if (goal.daysRemaining !== null && goal.daysRemaining >= 0 && goal.daysRemaining <= 7) {
         candidates.push({
           type: 'GOAL_DEADLINE',
@@ -115,6 +120,26 @@ export class NotificationsService {
           dedupeKey: `goal:deadline:${goal.id}:${goal.deadline}`,
         });
       }
+    }
+
+    // Read from the database rather than from the list above. The goal may have been
+    // marked achieved by someone opening the goals page first, in which case it is no
+    // longer "active" and the list would never show it here.
+    const recentlyAchieved = await this.prisma.goal.findMany({
+      where: {
+        userId,
+        status: 'ACHIEVED',
+        achievedAt: { gte: new Date(Date.now() - GOAL_ACHIEVED_LOOKBACK_MS) },
+      },
+      select: { id: true, title: true },
+    });
+    for (const goal of recentlyAchieved) {
+      candidates.push({
+        type: 'GOAL_PROGRESS',
+        title: `Goal reached: ${goal.title}`,
+        body: 'You hit the target you set yourself.',
+        dedupeKey: `goal:achieved:${goal.id}`,
+      });
     }
 
     if (candidates.length === 0) return { created: 0 };

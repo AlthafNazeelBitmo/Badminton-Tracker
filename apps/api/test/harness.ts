@@ -18,8 +18,20 @@ export interface TestContext {
  * production uses. Tests that stub the container prove that the stub works; these prove
  * that the application works.
  */
-export async function createTestApp(): Promise<TestContext> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+export async function createTestApp(
+  options: {
+    /**
+     * Providers to replace. Used for the boundaries the suite must not cross for real —
+     * the push transport above all, since a test must never notify an actual phone.
+     */
+    overrides?: Array<{ token: unknown; value: unknown }>;
+  } = {},
+): Promise<TestContext> {
+  let builder = Test.createTestingModule({ imports: [AppModule] });
+  for (const override of options.overrides ?? []) {
+    builder = builder.overrideProvider(override.token as never).useValue(override.value);
+  }
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   app.use(cookieParser());

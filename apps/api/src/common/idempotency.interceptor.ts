@@ -90,9 +90,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const endpoint = `${request.method} ${request.route?.path ?? request.path}`;
     const requestHash = hashBody(request.body);
 
-    return from(
-      this.prisma.idempotencyKey.findUnique({ where: { userId_key: { userId, key } } }),
-    ).pipe(
+    return from(this.findLive(userId, key)).pipe(
       switchMap((stored) => {
         if (stored) {
           if (stored.endpoint !== endpoint || stored.requestHash !== requestHash) {
@@ -123,6 +121,23 @@ export class IdempotencyInterceptor implements NestInterceptor {
         );
       }),
     );
+  }
+
+  /**
+   * The stored record for a key, if it is still within its retention window.
+   *
+   * An expired record is deleted here rather than replayed. The hourly purge would remove
+   * it anyway; doing it at read time means retention is exactly what the contract says,
+   * not "up to an hour more", and it clears the row so this request can record its own.
+   */
+  private async findLive(userId: string, key: string) {
+    const stored = await this.prisma.idempotencyKey.findUnique({
+      where: { userId_key: { userId, key } },
+    });
+    if (!stored || stored.expiresAt > new Date()) return stored;
+
+    await this.prisma.idempotencyKey.deleteMany({ where: { id: stored.id } });
+    return null;
   }
 
   /**
