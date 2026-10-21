@@ -1,10 +1,16 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { SyncPullResponse, SyncStatusResponse } from '@badminton/contracts';
+import type {
+  SyncManifestResponse,
+  SyncPullResponse,
+  SyncStatusResponse,
+} from '@badminton/contracts';
 import { request } from '../api/client';
 import { ApiError, isRetryable } from '../api/errors';
 import { getDatabase } from '../db/database';
 import {
-  localCounts,
+  confirmedCounts,
+  pruneOrphanedLocalPlayers,
+  removeMissing,
   upsertMatches,
   upsertPlayers,
   upsertSessions,
@@ -78,7 +84,12 @@ async function runSync(db?: SQLiteDatabase): Promise<SyncOutcome> {
   }
 
   try {
-    pulled = await pull(database);
+    const result = await pull(database);
+    pulled = result.received;
+
+    // Only once the run has completed: mid-run, the server's version of a match may not
+    // have arrived yet, and the cache would be judged against half the picture.
+    if (result.complete) await reconcile(database);
   } catch (error) {
     if (error instanceof ApiError && error.requiresReauthentication) {
       return { status: 'UNAUTHENTICATED' };
@@ -128,13 +139,46 @@ async function push(db: SQLiteDatabase): Promise<number> {
 }
 
 async function sendEntry(entry: OutboxEntry): Promise<void> {
-  await request(entry.endpoint, {
-    method: entry.method,
-    body: entry.method === 'DELETE' ? undefined : entry.body,
-    // The same key on every attempt is the whole mechanism: it is what lets the server
-    // recognise a replay rather than create a second match.
-    idempotencyKey: entry.idempotencyKey,
-  });
+  try {
+    await request(entry.endpoint, {
+      method: entry.method,
+      body: entry.method === 'DELETE' ? undefined : entry.body,
+      // The same key on every attempt is the whole mechanism: it is what lets the server
+      // recognise a replay rather than create a second match.
+      idempotencyKey: entry.idempotencyKey,
+    });
+  } catch (error) {
+    if (await alreadyApplied(entry, error)) return;
+    throw error;
+  }
+}
+
+/**
+ * Whether a refused create was refused because it already succeeded.
+ *
+ * The server forgets idempotency keys after 48 hours. A phone that comes back online
+ * after that, retrying a match whose first attempt did land, no longer gets the original
+ * response replayed — it gets `409 DUPLICATE`, because the match id it assigned is taken.
+ * That is the right outcome (still one match), but parking it as a failure would tell the
+ * user a saved match "could not be saved".
+ *
+ * So the id is looked up. Found means it is ours and it is there: delivered. Not found
+ * means the conflict is something else, and the original refusal stands.
+ */
+async function alreadyApplied(entry: OutboxEntry, error: unknown): Promise<boolean> {
+  if (!(error instanceof ApiError) || error.status !== 409 || error.code !== 'DUPLICATE') {
+    return false;
+  }
+  if (entry.kind !== 'CREATE_MATCH' || !entry.entityId) return false;
+
+  try {
+    await request(`/matches/${entry.entityId}`);
+    return true;
+  } catch (lookup) {
+    if (lookup instanceof ApiError && lookup.status === 404) return false;
+    // Offline mid-check: retryable, so the entry is simply tried again later.
+    throw lookup;
+  }
 }
 
 /**
@@ -144,7 +188,7 @@ async function sendEntry(entry: OutboxEntry): Promise<void> {
  * and `syncedAt` is only stored when the server reports the run complete. Storing it
  * mid-run would skip every page not yet fetched.
  */
-async function pull(db: SQLiteDatabase): Promise<number> {
+async function pull(db: SQLiteDatabase): Promise<{ received: number; complete: boolean }> {
   const since = await readState(SYNC_STATE_KEYS.lastSyncedAt, db);
   let cursor = await readState(SYNC_STATE_KEYS.pendingCursor, db);
   let received = 0;
@@ -170,7 +214,7 @@ async function pull(db: SQLiteDatabase): Promise<number> {
       await writeState(SYNC_STATE_KEYS.lastSyncedAt, response.syncedAt, db);
       await writeState(SYNC_STATE_KEYS.pendingCursor, null, db);
       await writeServerCounts(response.counts, db);
-      return received;
+      return { received, complete: true };
     }
 
     cursor = response.cursor;
@@ -179,7 +223,8 @@ async function pull(db: SQLiteDatabase): Promise<number> {
     await writeState(SYNC_STATE_KEYS.pendingCursor, cursor, db);
   }
 
-  return received;
+  // Page budget spent with more to come; the next sync resumes from the stored cursor.
+  return { received, complete: false };
 }
 
 async function applyPage(response: SyncPullResponse, db: SQLiteDatabase): Promise<void> {
@@ -192,16 +237,46 @@ async function applyPage(response: SyncPullResponse, db: SQLiteDatabase): Promis
 }
 
 /**
- * Whether the local cache has drifted from the server.
+ * Tidies the cache after a completed pull.
+ *
+ * Two kinds of leftover, both of which used to stay for good:
+ *
+ *  - **Players the server declined.** A player named offline whom the server matched to
+ *    someone it already knew. Pruned once no match refers to them.
+ *  - **Records deleted on another device.** Deletions are not sent as tombstones, so the
+ *    counts are compared and, only on a surplus, the server's list of ids is fetched and
+ *    anything confirmed but missing from it is dropped.
+ */
+async function reconcile(db: SQLiteDatabase): Promise<void> {
+  await pruneOrphanedLocalPlayers(db);
+
+  if (!(await hasDiverged(db))) return;
+
+  const manifest = await request<SyncManifestResponse>('/sync/manifest');
+
+  // Deleting on the strength of a malformed answer would empty the cache. Doing nothing
+  // leaves stale rows, which the next sync gets another chance to fix.
+  const lists = [manifest.matchIds, manifest.sessionIds, manifest.playerIds, manifest.venueIds];
+  if (!lists.every(Array.isArray)) return;
+
+  await removeMissing(manifest, db);
+}
+
+/**
+ * Whether the local cache holds records the server no longer has.
  *
  * Deletions are not tracked with tombstones, so a match deleted on another device would
- * otherwise linger here forever. Comparing counts catches that: cheap enough to run on
- * every launch, and a mismatch is the signal to rebuild from scratch.
+ * otherwise linger here forever. Comparing counts catches that cheaply; the manifest then
+ * says which records to drop. Only confirmed rows are counted — a match still waiting to
+ * upload is not on the server yet, and would otherwise read as a surplus.
  */
 export async function hasDiverged(db?: SQLiteDatabase): Promise<boolean> {
   const database = db ?? (await getDatabase());
 
-  const [expected, actual] = await Promise.all([readServerCounts(database), localCounts(database)]);
+  const [expected, actual] = await Promise.all([
+    readServerCounts(database),
+    confirmedCounts(database),
+  ]);
   if (!expected) return false;
 
   // Only a local *surplus* means divergence. A shortfall is the ordinary state of a sync
@@ -218,8 +293,8 @@ export async function hasDiverged(db?: SQLiteDatabase): Promise<boolean> {
 /**
  * Asks the server what it holds, without transferring any records.
  *
- * Cheap enough for every launch, and the answer is what tells the app whether a full
- * re-pull is needed.
+ * Cheap enough for every launch. Each completed pull already carries the same counts, so
+ * the sync engine does not need this; it is here for a settings or diagnostics screen.
  */
 export async function fetchStatus(): Promise<SyncStatusResponse> {
   return request<SyncStatusResponse>('/sync/status');
@@ -229,7 +304,7 @@ export async function fetchStatus(): Promise<SyncStatusResponse> {
  * Discards the cursor so the next sync re-reads everything.
  *
  * The cache is left in place deliberately. Clearing it would empty the history screen
- * for as long as the re-pull takes; upserting over it instead means the user sees stale
+ * for as long as the next pull takes; upserting over it instead means the user sees stale
  * data briefly rather than no data at all.
  */
 export async function resetSyncCursor(db?: SQLiteDatabase): Promise<void> {

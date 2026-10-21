@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   syncPullSchema,
+  type SyncManifestResponse,
   type SyncPullQuery,
   type SyncPullResponse,
   type SyncStatusResponse,
@@ -33,13 +34,28 @@ export class SyncController {
     return this.sync.pull(userId, query);
   }
 
+  @Get('manifest')
+  // Fetched only after the cheap count check has already found a discrepancy, so this
+  // budget is far more than a well-behaved client will ever use.
+  @RateLimit({ limit: 30, windowSeconds: 3600 })
+  @ApiOperation({
+    summary: 'Every id the caller owns, for reconciling deletions',
+    description:
+      'Call when the local record counts exceed the `counts` in a completed pull: ' +
+      'something was deleted on another device. Drop local records missing from these ' +
+      'lists — except ones still waiting to upload, which the server has not seen yet.',
+  })
+  manifest(@CurrentUser('id') userId: string): Promise<SyncManifestResponse> {
+    return this.sync.manifest(userId);
+  }
+
   @Get('status')
   @RateLimit({ limit: 120, windowSeconds: 3600 })
   @ApiOperation({
     summary: 'Record counts for detecting a divergent local cache',
     description:
       'Cheap enough to call on every launch. When the local counts disagree, something ' +
-      'was deleted elsewhere and the client re-pulls from scratch.',
+      'was deleted elsewhere; fetch `/sync/manifest` to find out what.',
   })
   status(@CurrentUser('id') userId: string): Promise<SyncStatusResponse> {
     return this.sync.status(userId);

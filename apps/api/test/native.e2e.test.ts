@@ -638,6 +638,32 @@ describe('native client support', () => {
       expect(after.body.lastMatchAt).toBeNull();
     });
 
+    it('lists every id the caller owns, so a phone can drop what was deleted elsewhere', async () => {
+      const user = await registerUser(context);
+      const kept = await recordMatch(user);
+      const deleted = await recordMatch(user, { opponents: [{ name: 'Deleted Later' }] });
+
+      await user.agent.delete(`/api/v1/matches/${deleted.id}`).expect(204);
+
+      const manifest = await user.agent.get('/api/v1/sync/manifest').expect(200);
+
+      expect(manifest.body.matchIds).toEqual([kept.id]);
+      expect(manifest.body.playerIds.length).toBeGreaterThan(0);
+      expect(manifest.body.sessionIds.length).toBeGreaterThan(0);
+      expect(manifest.body.venueIds).toEqual([]);
+    });
+
+    it('never includes another user’s ids in the manifest', async () => {
+      const owner = await registerUser(context);
+      const stranger = await registerUser(context);
+      const match = await recordMatch(owner);
+
+      const manifest = await stranger.agent.get('/api/v1/sync/manifest').expect(200);
+
+      expect(manifest.body.matchIds).not.toContain(match.id);
+      expect(manifest.body.matchIds).toEqual([]);
+    });
+
     it('rejects a starting point that is not a timestamp', async () => {
       const user = await registerUser(context);
       await user.agent.get('/api/v1/sync/pull').query({ since: 'yesterday' }).expect(422);

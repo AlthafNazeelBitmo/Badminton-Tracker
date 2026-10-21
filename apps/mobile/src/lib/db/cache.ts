@@ -1,5 +1,11 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { SyncMatch, SyncPlayer, SyncSession, SyncVenue } from '@badminton/contracts';
+import type {
+  SyncManifestResponse,
+  SyncMatch,
+  SyncPlayer,
+  SyncSession,
+  SyncVenue,
+} from '@badminton/contracts';
 import { getDatabase } from './database';
 
 /**
@@ -376,6 +382,131 @@ export async function localCounts(db?: SQLiteDatabase): Promise<{
   );
 
   return row ?? { matches: 0, sessions: 0, players: 0, venues: 0 };
+}
+
+/**
+ * Row counts for records the server has confirmed.
+ *
+ * What divergence detection compares against the server's own counts. A match recorded
+ * offline is not on the server yet, so counting it would look like a surplus — and one
+ * the server refused would look like a surplus for ever, sending every sync off to fetch
+ * the manifest for nothing.
+ */
+export async function confirmedCounts(db?: SQLiteDatabase): Promise<{
+  matches: number;
+  sessions: number;
+  players: number;
+  venues: number;
+}> {
+  const database = db ?? (await getDatabase());
+
+  const row = await database.getFirstAsync<{
+    matches: number;
+    sessions: number;
+    players: number;
+    venues: number;
+  }>(
+    `SELECT
+       (SELECT COUNT(*) FROM matches  WHERE pending_local = 0) AS matches,
+       (SELECT COUNT(*) FROM sessions WHERE pending_local = 0) AS sessions,
+       (SELECT COUNT(*) FROM players  WHERE pending_local = 0) AS players,
+       (SELECT COUNT(*) FROM venues   WHERE pending_local = 0) AS venues`,
+  );
+
+  return row ?? { matches: 0, sessions: 0, players: 0, venues: 0 };
+}
+
+const RECONCILED_TABLES = ['matches', 'sessions', 'players', 'venues'] as const;
+
+/**
+ * Drops confirmed records the server no longer has: deleted on another device.
+ *
+ * Rows still waiting to upload are never touched. They are missing from the manifest
+ * because the server has not seen them yet, not because anyone deleted them — removing
+ * one would delete a match somebody just recorded.
+ *
+ * The ids go into a temporary table rather than a `NOT IN (?, ?, …)` list, which would
+ * hit SQLite's bound-parameter limit on a long enough history.
+ */
+export async function removeMissing(
+  manifest: Pick<SyncManifestResponse, 'matchIds' | 'sessionIds' | 'playerIds' | 'venueIds'>,
+  db?: SQLiteDatabase,
+): Promise<number> {
+  const database = db ?? (await getDatabase());
+  const lists: Record<(typeof RECONCILED_TABLES)[number], string[]> = {
+    matches: manifest.matchIds,
+    sessions: manifest.sessionIds,
+    players: manifest.playerIds,
+    venues: manifest.venueIds,
+  };
+
+  let removed = 0;
+
+  await database.withExclusiveTransactionAsync(async (tx) => {
+    await tx.execAsync(
+      `CREATE TEMP TABLE IF NOT EXISTS manifest_ids (
+         collection TEXT NOT NULL,
+         id         TEXT NOT NULL,
+         PRIMARY KEY (collection, id)
+       )`,
+    );
+    await tx.execAsync('DELETE FROM manifest_ids');
+
+    for (const table of RECONCILED_TABLES) {
+      const ids = lists[table];
+      for (let start = 0; start < ids.length; start += 200) {
+        const chunk = ids.slice(start, start + 200);
+        await tx.runAsync(
+          `INSERT OR IGNORE INTO manifest_ids (collection, id) VALUES ${chunk.map(() => '(?, ?)').join(', ')}`,
+          chunk.flatMap((id) => [table, id]),
+        );
+      }
+    }
+
+    for (const table of RECONCILED_TABLES) {
+      // The table name comes from the constant above, never from input.
+      const result = await tx.runAsync(
+        `DELETE FROM ${table}
+          WHERE pending_local = 0
+            AND id NOT IN (SELECT id FROM manifest_ids WHERE collection = ?)`,
+        [table],
+      );
+      removed += result.changes;
+    }
+
+    await tx.execAsync('DELETE FROM manifest_ids');
+  });
+
+  return removed;
+}
+
+/**
+ * Removes players created offline that no match refers to any more.
+ *
+ * Name someone new while offline — "priya" — and the device creates a local player for
+ * them. If the server already knew a "Priya", it keeps that one rather than splitting her
+ * statistics across two records, and the next pull rewrites the match to point at her.
+ * The local copy is then referenced by nothing, yet still shows in the picker beside the
+ * real one.
+ *
+ * Only unconfirmed players are candidates, and only once no cached match mentions them.
+ * A match still waiting to upload keeps its new players alive, so nothing is removed
+ * before the server has had its say.
+ */
+export async function pruneOrphanedLocalPlayers(db?: SQLiteDatabase): Promise<number> {
+  const database = db ?? (await getDatabase());
+
+  const result = await database.runAsync(
+    `DELETE FROM players
+      WHERE pending_local = 1
+        AND NOT EXISTS (
+          SELECT 1 FROM matches
+           WHERE (',' || matches.opponent_ids || ',') LIKE ('%,' || players.id || ',%')
+              OR (',' || matches.partner_ids  || ',') LIKE ('%,' || players.id || ',%')
+        )`,
+  );
+
+  return result.changes;
 }
 
 function toCachedMatch(row: MatchRow): CachedMatch {

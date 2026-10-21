@@ -1,12 +1,13 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SyncMatch, SyncPullResponse } from '@badminton/contracts';
 import { createTestDatabase } from '../db/testing';
-import { countMatches, listMatches, localCounts } from '../db/cache';
+import { countMatches, listMatches, listPlayers, localCounts } from '../db/cache';
 import { SYNC_STATE_KEYS } from '../db/schema';
 import { readState, writeState } from './sync-state';
 import { claimReady, countFailed, countPending, enqueue, listAll } from './outbox';
 import { __resetSyncState, hasDiverged, resetSyncCursor, sync } from './engine';
 import { ApiError, NetworkError } from '../api/errors';
+import { recordMatch } from '../repositories/matches';
 
 jest.mock('../api/client', () => ({ request: jest.fn() }));
 jest.mock('../db/database', () => ({
@@ -448,5 +449,286 @@ describe('outbox ordering under failure', () => {
 
     const ready = await claimReady(20, db);
     expect(ready.map((entry) => entry.entityId)).toEqual(['match-local', 'match-2']);
+  });
+});
+
+describe('cleaning up once the server has had its say', () => {
+  /** Holds every queued entry back, as if its backoff had not expired yet. */
+  async function holdOutbox(): Promise<void> {
+    await db.runAsync(`UPDATE outbox SET next_attempt_at = ?`, [
+      new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    ]);
+  }
+
+  const offlineMatch = {
+    discipline: 'SINGLES' as const,
+    session: { date: '2026-08-18', sessionType: 'CASUAL' as const },
+    partners: [],
+    opponents: [{ name: 'priya' }],
+    games: [
+      { myScore: 21, opponentScore: 15 },
+      { myScore: 21, opponentScore: 17 },
+    ],
+  };
+
+  it('drops a player named offline whom the server matched to someone it already knew', async () => {
+    const { match } = await recordMatch(offlineMatch, db);
+
+    // The server already had a "Priya", so it kept her rather than creating a second one.
+    // The next pull rewrites the match to point at her.
+    mockRequest.mockImplementation(async (path: string) =>
+      path === '/sync/pull'
+        ? pullPage({
+            changed: {
+              matches: [
+                {
+                  ...syncMatch(match.id),
+                  opponentIds: ['player-priya'],
+                  opponentNames: ['Priya'],
+                },
+              ],
+              sessions: [],
+              players: [
+                {
+                  id: 'player-priya',
+                  name: 'Priya',
+                  nickname: null,
+                  relationship: null,
+                  isSelf: false,
+                  rating: null,
+                  updatedAt: '2026-08-18T10:00:00.000Z',
+                },
+              ],
+              venues: [],
+            },
+            counts: { matches: 1, sessions: 0, players: 1, venues: 0 },
+          })
+        : ({} as never),
+    );
+
+    await sync(db);
+
+    // Before, the picker showed both "priya" and "Priya" from here on.
+    const players = await listPlayers(undefined, db);
+    expect(players.map((player) => player.name)).toEqual(['Priya']);
+  });
+
+  it('keeps a new player while their match is still waiting to upload', async () => {
+    await recordMatch(offlineMatch, db);
+    await holdOutbox();
+    mockRequest.mockResolvedValue(pullPage());
+
+    await sync(db);
+
+    // The server has not seen this match yet, so it has not had a chance to decide who
+    // "priya" is. Removing her now would leave the queued match pointing at nobody.
+    expect((await listPlayers(undefined, db)).map((player) => player.name)).toEqual(['priya']);
+  });
+
+  it('removes a match that was deleted on another device', async () => {
+    mockRequest.mockResolvedValueOnce(
+      pullPage({
+        changed: {
+          matches: [syncMatch('kept-1'), syncMatch('kept-2'), syncMatch('deleted-on-web')],
+          sessions: [],
+          players: [],
+          venues: [],
+        },
+        counts: { matches: 3, sessions: 0, players: 0, venues: 0 },
+      }),
+    );
+    await sync(db);
+    expect(await countMatches(db)).toBe(3);
+
+    // Deleted on the website. Nothing is sent about it — only the count drops.
+    __resetSyncState();
+    mockRequest.mockImplementation(async (path: string) =>
+      path === '/sync/manifest'
+        ? { matchIds: ['kept-1', 'kept-2'], sessionIds: [], playerIds: [], venueIds: [] }
+        : pullPage({ counts: { matches: 2, sessions: 0, players: 0, venues: 0 } }),
+    );
+    await sync(db);
+
+    const remaining = await listMatches({}, db);
+    expect(remaining.map((match) => match.id).sort()).toEqual(['kept-1', 'kept-2']);
+  });
+
+  it('never removes a match that is still waiting to upload', async () => {
+    const { match: offline } = await recordMatch(offlineMatch, db);
+    await holdOutbox();
+
+    mockRequest.mockResolvedValueOnce(
+      pullPage({
+        changed: {
+          matches: [syncMatch('kept'), syncMatch('deleted-on-web')],
+          sessions: [],
+          players: [],
+          venues: [],
+        },
+        counts: { matches: 2, sessions: 0, players: 0, venues: 0 },
+      }),
+    );
+    await sync(db);
+
+    __resetSyncState();
+    mockRequest.mockImplementation(async (path: string) =>
+      path === '/sync/manifest'
+        ? { matchIds: ['kept'], sessionIds: [], playerIds: [], venueIds: [] }
+        : pullPage({ counts: { matches: 1, sessions: 0, players: 0, venues: 0 } }),
+    );
+    await sync(db);
+
+    // Missing from the manifest because the server has not seen it yet, not because
+    // anyone deleted it. Removing it would delete a match somebody just recorded.
+    const ids = (await listMatches({}, db)).map((match) => match.id).sort();
+    expect(ids).toEqual(['kept', offline.id].sort());
+  });
+
+  it('does not fetch the manifest when nothing was deleted', async () => {
+    mockRequest.mockResolvedValue(
+      pullPage({
+        changed: { matches: [syncMatch('only')], sessions: [], players: [], venues: [] },
+        counts: { matches: 1, sessions: 0, players: 0, venues: 0 },
+      }),
+    );
+
+    await sync(db);
+
+    expect(mockRequest).not.toHaveBeenCalledWith('/sync/manifest');
+  });
+
+  it('does not mistake a match waiting to upload for something deleted elsewhere', async () => {
+    await recordMatch(offlineMatch, db);
+    await holdOutbox();
+    mockRequest.mockResolvedValue(pullPage());
+
+    await sync(db);
+
+    // One local match, a server count of zero — but the local one is unconfirmed, so this
+    // is not a surplus. Counting it would send every sync off to fetch the manifest.
+    expect(mockRequest).not.toHaveBeenCalledWith('/sync/manifest');
+  });
+
+  it('does not judge the cache part-way through a run', async () => {
+    // Counts from an earlier run that say the cache holds too much.
+    await writeState(
+      SYNC_STATE_KEYS.serverCounts,
+      JSON.stringify({ matches: 0, sessions: 0, players: 0, venues: 0 }),
+      db,
+    );
+    mockRequest.mockResolvedValue(
+      pullPage({
+        hasMore: true,
+        cursor: 'more',
+        changed: { matches: [syncMatch('half-way')], sessions: [], players: [], venues: [] },
+      }),
+    );
+
+    await sync(db);
+
+    // Mid-run, the server's version of the data has not all arrived; acting now would
+    // compare the cache against half the picture.
+    expect(mockRequest).not.toHaveBeenCalledWith('/sync/manifest');
+    expect(await countMatches(db)).toBe(1);
+  });
+
+  it('leaves the cache alone if the manifest comes back malformed', async () => {
+    mockRequest.mockResolvedValueOnce(
+      pullPage({
+        changed: {
+          matches: [syncMatch('a'), syncMatch('b')],
+          sessions: [],
+          players: [],
+          venues: [],
+        },
+        counts: { matches: 2, sessions: 0, players: 0, venues: 0 },
+      }),
+    );
+    await sync(db);
+
+    __resetSyncState();
+    mockRequest.mockImplementation(async (path: string) =>
+      path === '/sync/manifest'
+        ? ({ unexpected: true } as never)
+        : pullPage({ counts: { matches: 1, sessions: 0, players: 0, venues: 0 } }),
+    );
+    await sync(db);
+
+    // Deleting on the strength of a bad answer would empty the cache.
+    expect(await countMatches(db)).toBe(2);
+  });
+});
+
+describe('a retry after the server has forgotten its key', () => {
+  const lateEntry = {
+    kind: 'CREATE_MATCH' as const,
+    entityId: 'match-landed-earlier',
+    endpoint: '/matches',
+    method: 'POST' as const,
+    body: { id: 'match-landed-earlier', discipline: 'SINGLES' },
+  };
+
+  const duplicate = () =>
+    new ApiError(409, 'DUPLICATE', 'A record with these details already exists.');
+
+  it('counts it as delivered when the match is already there', async () => {
+    await enqueue(lateEntry, db);
+    mockRequest.mockImplementation(async (path: string) => {
+      if (path === '/matches') throw duplicate();
+      if (path === '/matches/match-landed-earlier') return { id: 'match-landed-earlier' } as never;
+      return pullPage();
+    });
+
+    const outcome = await sync(db);
+
+    // The first attempt did land; only its reply was lost. Parking this would tell the
+    // user a saved match "could not be saved".
+    expect(outcome).toMatchObject({ status: 'SYNCED', pushed: 1 });
+    expect(await countFailed(db)).toBe(0);
+    expect(await countPending(db)).toBe(0);
+  });
+
+  it('still parks it when the conflict turns out to be about something else', async () => {
+    await enqueue(lateEntry, db);
+    mockRequest.mockImplementation(async (path: string) => {
+      if (path === '/matches') throw duplicate();
+      if (path === '/matches/match-landed-earlier')
+        throw new ApiError(404, 'NOT_FOUND', 'Not found.');
+      return pullPage();
+    });
+
+    await sync(db);
+
+    expect(await countFailed(db)).toBe(1);
+  });
+
+  it('tries again later if the check itself cannot reach the server', async () => {
+    await enqueue(lateEntry, db);
+    mockRequest.mockImplementation(async (path: string) => {
+      if (path === '/matches') throw duplicate();
+      throw new NetworkError();
+    });
+
+    await sync(db);
+
+    const [entry] = await listAll(db);
+    expect(entry?.status).toBe('PENDING');
+    expect(entry?.attempts).toBe(1);
+  });
+
+  it('does not apply the check to other kinds of conflict', async () => {
+    await enqueue(lateEntry, db);
+    mockRequest.mockImplementation(async (path: string) => {
+      if (path === '/matches') {
+        throw new ApiError(409, 'IDEMPOTENCY_KEY_REUSED', 'Key used for a different request.');
+      }
+      return pullPage();
+    });
+
+    await sync(db);
+
+    // Same key, different body: a client bug. Looking the match up would hide it.
+    expect(mockRequest).not.toHaveBeenCalledWith('/matches/match-landed-earlier');
+    expect(await countFailed(db)).toBe(1);
   });
 });

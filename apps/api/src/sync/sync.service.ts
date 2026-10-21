@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type {
+  SyncManifestResponse,
   SyncMatch,
   SyncPullQuery,
   SyncPullResponse,
@@ -166,7 +167,8 @@ export class SyncService {
         })),
       },
       // Deletions are not tracked with tombstones. The client reconciles instead: when
-      // its local count exceeds the authoritative count below, it re-pulls from scratch.
+      // its local count exceeds the authoritative count below, it fetches the manifest of
+      // ids and drops whatever is missing from it.
       // Tombstone tables are the more precise answer and the right one at a scale this
       // product does not have; the counts make the divergence detectable, which is what
       // actually matters.
@@ -218,10 +220,48 @@ export class SyncService {
   }
 
   /**
+   * Every id the caller owns, for reconciling deletions.
+   *
+   * The counterpart to not keeping tombstones. Counts tell a client *that* something was
+   * deleted elsewhere; this tells it *what*. Ids only, ordered for stable output.
+   */
+  async manifest(userId: string): Promise<SyncManifestResponse> {
+    const [matches, sessions, players, venues] = await Promise.all([
+      this.prisma.match.findMany({
+        where: { userId },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      }),
+      this.prisma.session.findMany({
+        where: { userId },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      }),
+      this.prisma.player.findMany({
+        where: { userId },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      }),
+      this.prisma.venue.findMany({
+        where: { userId },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      }),
+    ]);
+
+    return {
+      matchIds: matches.map((row) => row.id),
+      sessionIds: sessions.map((row) => row.id),
+      playerIds: players.map((row) => row.id),
+      venueIds: venues.map((row) => row.id),
+    };
+  }
+
+  /**
    * Cheap consistency check, called on launch.
    *
    * The client compares these totals with its own. A mismatch means something was
-   * deleted on another device, and it re-pulls from scratch.
+   * deleted on another device, and it fetches the manifest to find out what.
    */
   async status(userId: string): Promise<SyncStatusResponse> {
     const [matches, sessions, players, venues, lastMatch] = await Promise.all([

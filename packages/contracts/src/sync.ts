@@ -146,6 +146,20 @@ export interface SyncPullResponse {
   };
 }
 
+/**
+ * Every id the server currently holds for the caller.
+ *
+ * Fetched only when the client's counts show it holds more than the server does — the
+ * signal that something was deleted on another device. The client then drops whatever
+ * is missing from these lists. Ids only, so even a long history is a small payload.
+ */
+export interface SyncManifestResponse {
+  matchIds: string[];
+  sessionIds: string[];
+  playerIds: string[];
+  venueIds: string[];
+}
+
 /** Outcome of draining one queued operation, reported back for the client's log. */
 export interface SyncOperationResult {
   idempotencyKey: string;
