@@ -597,8 +597,20 @@ async function renumberSession(
 }
 
 /** Sessions store a bare date; a match with no explicit time defaults to 18:00 local-naive. */
-function defaultPlayedAt(sessionDate: Date): Date {
-  return new Date(sessionDate.getTime() + 18 * 3600 * 1000);
+/**
+ * When a match was played, if the client did not say: the evening of the session's date,
+ * which keeps a day's matches in a sensible order relative to other days.
+ *
+ * Never in the future, though. A match recorded at 3 pm for today would otherwise be
+ * stamped 6 pm, and every analytics range — which ends at "now" — would leave it out
+ * until the evening: the dashboard would claim no matches minutes after one was saved.
+ * In that case the match is stamped with the moment it was recorded.
+ */
+export function defaultPlayedAt(sessionDate: Date, now: Date = new Date()): Date {
+  const evening = new Date(sessionDate.getTime() + 18 * 3600 * 1000);
+  if (evening <= now) return evening;
+  // A session dated in the future is a deliberate choice; leave its evening default.
+  return sessionDate <= now ? now : evening;
 }
 
 function startOfUtcDay(date: Date): Date {
