@@ -63,7 +63,7 @@ export default function DashboardScreen(): React.JSX.Element {
         <RefreshControl
           refreshing={syncing}
           onRefresh={() => void reload()}
-          tintColor={palette.accent}
+          tintColor={palette.accentText}
         />
       }
     >

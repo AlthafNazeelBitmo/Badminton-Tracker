@@ -22,6 +22,7 @@ export function MatchRow({
 
   const won = match.derived.result === 'WIN';
   const resultColour = won ? palette.statusGood : palette.statusCritical;
+  const resultTint = won ? palette.statusGoodSoft : palette.statusCriticalSoft;
 
   const opponents = match.opponentNames.filter(Boolean).join(' & ') || 'Unknown opponent';
   const partners = match.partnerNames.filter(Boolean).join(' & ');
@@ -38,8 +39,8 @@ export function MatchRow({
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: palette.surface2 }]}
     >
-      <View style={[styles.result, { backgroundColor: resultColour }]}>
-        <Text style={[typography.bodyStrong, { color: palette.accentInk }]}>{won ? 'W' : 'L'}</Text>
+      <View style={[styles.result, { backgroundColor: resultTint }]}>
+        <Text style={[typography.bodyStrong, { color: resultColour }]}>{won ? 'W' : 'L'}</Text>
       </View>
 
       <View style={styles.body}>
@@ -107,9 +108,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   result: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

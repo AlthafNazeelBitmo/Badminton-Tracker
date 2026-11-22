@@ -17,7 +17,7 @@ export default function TabsLayout(): React.JSX.Element {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.accent,
+        tabBarActiveTintColor: palette.accentText,
         tabBarInactiveTintColor: palette.textMuted,
         tabBarStyle: { backgroundColor: palette.surface1, borderTopColor: palette.border },
         sceneStyle: { backgroundColor: palette.surface0 },

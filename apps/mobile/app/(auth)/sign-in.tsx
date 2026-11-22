@@ -94,7 +94,7 @@ export default function SignInScreen(): React.JSX.Element {
             Don’t have an account?
           </Text>
           <Link href="/(auth)/register" accessibilityRole="link">
-            <Text style={[typography.bodyStrong, { color: palette.accent }]}>Create one</Text>
+            <Text style={[typography.bodyStrong, { color: palette.accentText }]}>Create one</Text>
           </Link>
         </View>
       </ScrollView>

@@ -171,7 +171,7 @@ export function PersonPicker({
               onPress={() => setExpanded(true)}
               style={styles.more}
             >
-              <Text style={[typography.caption, { color: palette.accent }]}>
+              <Text style={[typography.caption, { color: palette.accentText }]}>
                 Show {suggestions.length - VISIBLE_SUGGESTIONS} more
               </Text>
             </Pressable>
@@ -202,12 +202,12 @@ function Suggestion({
         styles.suggestion,
         {
           backgroundColor: accent ? palette.accentSoft : palette.surface2,
-          borderColor: accent ? palette.accent : palette.border,
+          borderColor: accent ? palette.accentText : palette.border,
           opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
-      <Text style={[typography.body, { color: accent ? palette.accent : palette.textPrimary }]}>
+      <Text style={[typography.body, { color: accent ? palette.accentText : palette.textPrimary }]}>
         {label}
       </Text>
     </Pressable>

@@ -165,7 +165,7 @@ export default function RecordMatchScreen(): React.JSX.Element {
             onPress={() => router.back()}
             style={styles.close}
           >
-            <Text style={[typography.body, { color: palette.accent }]}>Cancel</Text>
+            <Text style={[typography.body, { color: palette.accentText }]}>Cancel</Text>
           </Pressable>
         </View>
 

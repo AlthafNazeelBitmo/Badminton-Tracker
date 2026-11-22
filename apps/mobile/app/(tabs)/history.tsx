@@ -140,7 +140,7 @@ export default function HistoryScreen(): React.JSX.Element {
               onRefresh={() => {
                 void refresh().then(load);
               }}
-              tintColor={palette.accent}
+              tintColor={palette.accentText}
             />
           }
           contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}

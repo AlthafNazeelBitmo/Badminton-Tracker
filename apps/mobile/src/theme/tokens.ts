@@ -25,14 +25,22 @@ export interface Palette {
   border: string;
   borderStrong: string;
 
+  /** Volt: a fill only — primary buttons, selected segments, the active tab. */
   accent: string;
   accentSoft: string;
+  /** Text and icons drawn on an `accent` fill. Dark in both themes. */
   accentInk: string;
+  /** The accent as text, a tint or a link: volt is too light to read on white. */
+  accentText: string;
 
   /** Reserved for state. Never reused as a chart series colour. */
   statusGood: string;
   statusWarning: string;
   statusCritical: string;
+  /** Soft tints behind status text, for badges and result chips. */
+  statusGoodSoft: string;
+  statusWarningSoft: string;
+  statusCriticalSoft: string;
 
   /** Categorical series in fixed order. A chart never cycles hues to fit more series. */
   series: readonly [string, string, string];
@@ -49,67 +57,75 @@ export interface Palette {
 }
 
 export const lightPalette: Palette = {
-  surface0: '#f4f4f1',
-  surface1: '#fcfcfb',
+  surface0: '#f4f5f7',
+  surface1: '#ffffff',
   surface2: '#ffffff',
 
-  textPrimary: '#0b0b0b',
-  textSecondary: '#52514e',
-  textMuted: '#6f6e69',
+  textPrimary: '#0a0b0d',
+  textSecondary: '#4b5058',
+  textMuted: '#747a83',
 
-  border: '#e1e0d9',
-  borderStrong: '#c3c2b7',
+  border: '#e5e7eb',
+  borderStrong: '#d1d5db',
 
-  accent: '#2a78d6',
-  accentSoft: '#e8f0fc',
-  accentInk: '#ffffff',
+  accent: '#cdf24b',
+  accentSoft: '#f2fbd2',
+  accentInk: '#0b0d06',
+  accentText: '#4a7300',
 
-  statusGood: '#006300',
-  statusWarning: '#8a5a00',
-  statusCritical: '#b4302f',
+  statusGood: '#047857',
+  statusWarning: '#a15c07',
+  statusCritical: '#be123c',
+  statusGoodSoft: '#e7f6ef',
+  statusWarningSoft: '#fdf3e2',
+  statusCriticalSoft: '#fdebef',
 
-  series: ['#2a78d6', '#eb6834', '#1baf7a'],
+  series: ['#4a7300', '#2563eb', '#d97706'],
 
-  divergePositive: '#2a78d6',
-  divergeNegative: '#e34948',
-  divergeNeutral: '#e1e0d9',
+  divergePositive: '#5e8f00',
+  divergeNegative: '#e11d48',
+  divergeNeutral: '#e5e7eb',
 
-  sequential: ['#eeeeea', '#cde2fb', '#9ec5f4', '#5598e7', '#2a78d6', '#184f95'],
+  sequential: ['#eceef1', '#e4f7a6', '#c6ea56', '#8fc414', '#5e8f00', '#3d5e00'],
 
-  grid: '#e1e0d9',
-  axis: '#c3c2b7',
+  grid: '#eceef1',
+  axis: '#d1d5db',
 };
 
 export const darkPalette: Palette = {
-  surface0: '#0d0d0d',
-  surface1: '#1a1a19',
-  surface2: '#232322',
+  surface0: '#08090a',
+  surface1: '#131416',
+  surface2: '#1b1c1f',
 
-  textPrimary: '#ffffff',
-  textSecondary: '#c3c2b7',
-  textMuted: '#898781',
+  textPrimary: '#f4f5f6',
+  textSecondary: '#a8adb5',
+  textMuted: '#757b84',
 
-  border: '#2c2c2a',
-  borderStrong: '#383835',
+  border: '#222428',
+  borderStrong: '#31343a',
 
-  accent: '#3987e5',
-  accentSoft: '#16283f',
-  accentInk: '#ffffff',
+  accent: '#cdf24b',
+  accentSoft: '#1d2410',
+  accentInk: '#0b0d06',
+  accentText: '#d4f56b',
 
-  statusGood: '#0ca30c',
-  statusWarning: '#fab219',
-  statusCritical: '#e66767',
+  statusGood: '#34d399',
+  statusWarning: '#fbbf24',
+  statusCritical: '#fb7185',
+  statusGoodSoft: '#0f2a21',
+  statusWarningSoft: '#2c2210',
+  statusCriticalSoft: '#331820',
 
-  series: ['#3987e5', '#d95926', '#199e70'],
+  series: ['#cdf24b', '#60a5fa', '#fb923c'],
 
-  divergePositive: '#3987e5',
-  divergeNegative: '#e66767',
-  divergeNeutral: '#383835',
+  divergePositive: '#b5df2e',
+  divergeNegative: '#f43f5e',
+  divergeNeutral: '#31343a',
 
-  sequential: ['#232322', '#104281', '#184f95', '#256abf', '#3987e5', '#86b6ef'],
+  sequential: ['#1b1c1f', '#2b3a10', '#4a6a12', '#7ea51a', '#b5df2e', '#e3fa8f'],
 
-  grid: '#2c2c2a',
-  axis: '#383835',
+  grid: '#1f2125',
+  axis: '#31343a',
 };
 
 /**
@@ -129,9 +145,9 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 14,
+  sm: 8,
+  md: 12,
+  lg: 16,
   pill: 999,
 } as const;
 
@@ -143,14 +159,14 @@ export const radius = {
  * which look mechanical at large sizes.
  */
 export const typography = {
-  display: { fontSize: 40, lineHeight: 44, fontWeight: '700' },
-  title: { fontSize: 26, lineHeight: 32, fontWeight: '700' },
-  heading: { fontSize: 19, lineHeight: 25, fontWeight: '600' },
+  display: { fontSize: 44, lineHeight: 46, fontWeight: '700', letterSpacing: -1.6 },
+  title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.7 },
+  heading: { fontSize: 19, lineHeight: 25, fontWeight: '600', letterSpacing: -0.3 },
   subheading: { fontSize: 16, lineHeight: 22, fontWeight: '600' },
   body: { fontSize: 15, lineHeight: 21, fontWeight: '400' },
   bodyStrong: { fontSize: 15, lineHeight: 21, fontWeight: '600' },
   caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
-  micro: { fontSize: 11, lineHeight: 15, fontWeight: '600' },
+  micro: { fontSize: 11, lineHeight: 15, fontWeight: '600', letterSpacing: 0.6 },
 } as const;
 
 /**

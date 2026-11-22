@@ -54,7 +54,7 @@ export function Button({
   const colours: Record<ButtonVariant, { background: string; text: string; border: string }> = {
     primary: { background: palette.accent, text: palette.accentInk, border: palette.accent },
     secondary: { background: palette.surface2, text: palette.textPrimary, border: palette.border },
-    ghost: { background: 'transparent', text: palette.accent, border: 'transparent' },
+    ghost: { background: 'transparent', text: palette.accentText, border: 'transparent' },
     danger: { background: palette.surface2, text: palette.statusCritical, border: palette.border },
   };
 
@@ -213,23 +213,19 @@ export function Badge({
 }): React.JSX.Element {
   const palette = usePalette();
 
-  const backgrounds = {
-    neutral: palette.surface2,
-    good: palette.statusGood,
-    critical: palette.statusCritical,
-    warning: palette.statusWarning,
-    accent: palette.accent,
+  // Soft tint behind coloured text, as on the web: a solid red or green with dark ink
+  // on it is hard to read, and a status should not shout louder than the content.
+  const tones = {
+    neutral: { background: palette.surface2, text: palette.textSecondary },
+    good: { background: palette.statusGoodSoft, text: palette.statusGood },
+    critical: { background: palette.statusCriticalSoft, text: palette.statusCritical },
+    warning: { background: palette.statusWarningSoft, text: palette.statusWarning },
+    accent: { background: palette.accent, text: palette.accentInk },
   } as const;
 
-  const isFilled = tone !== 'neutral';
-
   return (
-    <View style={[styles.badge, { backgroundColor: backgrounds[tone] }]}>
-      <Text
-        style={[typography.micro, { color: isFilled ? palette.accentInk : palette.textSecondary }]}
-      >
-        {label}
-      </Text>
+    <View style={[styles.badge, { backgroundColor: tones[tone].background }]}>
+      <Text style={[typography.micro, { color: tones[tone].text }]}>{label}</Text>
     </View>
   );
 }
@@ -296,7 +292,7 @@ export function Loading({ label = 'Loading' }: { label?: string }): React.JSX.El
 
   return (
     <View style={styles.loading} accessibilityRole="progressbar" accessibilityLabel={label}>
-      <ActivityIndicator color={palette.accent} />
+      <ActivityIndicator color={palette.accentText} />
     </View>
   );
 }
