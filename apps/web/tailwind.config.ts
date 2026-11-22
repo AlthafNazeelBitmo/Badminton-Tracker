@@ -1,6 +1,14 @@
 import type { Config } from 'tailwindcss';
 
 /**
+ * A token colour that still accepts Tailwind's opacity modifiers (`bg-ink/5`,
+ * `ring-loss/20`). A bare `var(--x)` cannot be given an alpha, and Tailwind silently
+ * drops the modifier — falling back to its default blue ring, for instance.
+ */
+const token = (name: string) =>
+  `color-mix(in srgb, var(${name}) calc(<alpha-value> * 100%), transparent)`;
+
+/**
  * Tailwind is configured against CSS custom properties rather than raw hex values, so
  * light and dark mode are one token swap in `globals.css` and the chart colours and the
  * UI colours can never drift apart.
@@ -12,34 +20,34 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: 'var(--surface-1)',
-          raised: 'var(--surface-2)',
-          sunken: 'var(--surface-0)',
-          overlay: 'var(--surface-3)',
+          DEFAULT: token('--surface-1'),
+          raised: token('--surface-2'),
+          sunken: token('--surface-0'),
+          overlay: token('--surface-3'),
         },
         ink: {
-          DEFAULT: 'var(--text-primary)',
-          secondary: 'var(--text-secondary)',
-          muted: 'var(--text-muted)',
+          DEFAULT: token('--text-primary'),
+          secondary: token('--text-secondary'),
+          muted: token('--text-muted'),
         },
         line: {
-          DEFAULT: 'var(--border)',
-          strong: 'var(--border-strong)',
+          DEFAULT: token('--border'),
+          strong: token('--border-strong'),
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          hover: 'var(--accent-hover)',
-          soft: 'var(--accent-soft)',
-          ink: 'var(--accent-ink)',
-          text: 'var(--accent-text)',
+          DEFAULT: token('--accent'),
+          hover: token('--accent-hover'),
+          soft: token('--accent-soft'),
+          ink: token('--accent-ink'),
+          text: token('--accent-text'),
         },
-        win: { DEFAULT: 'var(--status-good)', soft: 'var(--status-good-soft)' },
-        loss: { DEFAULT: 'var(--status-critical)', soft: 'var(--status-critical-soft)' },
-        warn: { DEFAULT: 'var(--status-warning)', soft: 'var(--status-warning-soft)' },
+        win: { DEFAULT: token('--status-good'), soft: token('--status-good-soft') },
+        loss: { DEFAULT: token('--status-critical'), soft: token('--status-critical-soft') },
+        warn: { DEFAULT: token('--status-warning'), soft: token('--status-warning-soft') },
         series: {
-          1: 'var(--series-1)',
-          2: 'var(--series-2)',
-          3: 'var(--series-3)',
+          1: token('--series-1'),
+          2: token('--series-2'),
+          3: token('--series-3'),
         },
       },
       borderRadius: {
