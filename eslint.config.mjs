@@ -27,6 +27,17 @@ export default tseslint.config(
   prettier,
 
   {
+    // Vercel's function shim: CommonJS by necessity, since it re-exports the compiled
+    // CommonJS output of the Nest build.
+    files: ['apps/api/api/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { module: 'writable', require: 'readonly' },
+    },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+
+  {
     rules: {
       // Unused variables are usually a leftover or a typo; an underscore prefix is the
       // documented escape hatch for a deliberately ignored argument.

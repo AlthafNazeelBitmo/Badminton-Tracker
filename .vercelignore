@@ -1,0 +1,26 @@
+# Excluded from uploads by `vercel deploy`, which does not read .gitignore.
+#
+# `.env` matters most: it is a secret, and production configuration lives in the Vercel
+# projects' environment variables instead. Build output and dependencies are rebuilt
+# remotely, and neither project builds the mobile app.
+
+node_modules
+.next
+dist
+coverage
+.vite
+.cache
+.turbo
+test-results
+playwright-report
+*.tsbuildinfo
+*.log
+.vercel
+
+.git
+.env
+.env.*
+!.env.example
+secrets/
+
+apps/mobile

@@ -82,4 +82,24 @@ export class MaintenanceService {
 
     return { deleted: result.count };
   }
+
+  /**
+   * Deletes rate-limit windows that have closed. Only the database store leaves any;
+   * with the memory store this is a cheap no-op on an empty table.
+   */
+  async purgeExpiredRateLimitBuckets(now: Date = new Date()): Promise<{ deleted: number }> {
+    const result = await this.prisma.rateLimitBucket.deleteMany({
+      where: { resetAt: { lt: now } },
+    });
+    return { deleted: result.count };
+  }
+
+  /** All the hourly housekeeping, in one call. */
+  async runCleanup(
+    now: Date = new Date(),
+  ): Promise<{ idempotencyKeysDeleted: number; rateLimitBucketsDeleted: number }> {
+    const keys = await this.purgeExpiredIdempotencyKeys(now);
+    const buckets = await this.purgeExpiredRateLimitBuckets(now);
+    return { idempotencyKeysDeleted: keys.deleted, rateLimitBucketsDeleted: buckets.deleted };
+  }
 }

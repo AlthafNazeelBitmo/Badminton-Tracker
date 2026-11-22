@@ -40,9 +40,7 @@ export class BackgroundJobsService implements OnApplicationBootstrap, OnApplicat
     // Every quarter of an hour: frequent enough that a goal reached on the way home is
     // announced before you are, rare enough to cost nothing.
     this.schedule('reminders', 15 * MINUTE, () => this.maintenance.runReminders());
-    this.schedule('idempotency-cleanup', 60 * MINUTE, () =>
-      this.maintenance.purgeExpiredIdempotencyKeys(),
-    );
+    this.schedule('idempotency-cleanup', 60 * MINUTE, () => this.maintenance.runCleanup());
   }
 
   onApplicationShutdown(): void {

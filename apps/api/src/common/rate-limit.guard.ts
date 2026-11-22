@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { CONFIG_TOKEN, type Env } from '../config/env';
 import { RateLimitError } from './errors';
+import { RATE_LIMIT_STORE, type RateLimitStore } from './rate-limit.store';
 
 export const RATE_LIMIT_KEY = 'rateLimit';
 
@@ -25,19 +26,13 @@ export const RateLimit = (options: RateLimitOptions) => SetMetadata(RATE_LIMIT_K
 export const SKIP_RATE_LIMIT_KEY = 'skipRateLimit';
 export const SkipRateLimit = () => SetMetadata(SKIP_RATE_LIMIT_KEY, true);
 
-interface Bucket {
-  count: number;
-  resetAt: number;
-}
-
 /**
- * Fixed-window rate limiter backed by an in-process map.
+ * Fixed-window rate limiter.
  *
- * This is honest about its scope: it protects a single instance, which is the right
- * amount of machinery for one API process and the deployment this project recommends.
- * Behind more than one instance it becomes per-instance rather than global — at that
- * point swap the store for Redis. The interface here does not change when you do,
- * which is the point of keeping it behind a guard.
+ * Where the counts live is configuration (`RATE_LIMIT_STORE`): in this process's memory
+ * for a single long-running API, or in PostgreSQL where requests are spread over many
+ * short-lived instances — serverless hosting — and a per-instance count would hand an
+ * attacker a fresh budget with every cold start. See `rate-limit.store.ts`.
  *
  * Authenticated requests are keyed by user id so one user on a shared NAT cannot exhaust
  * everyone else's budget — which is why this guard is registered *after* `AuthGuard`,
@@ -47,15 +42,13 @@ interface Bucket {
  */
 @Injectable()
 export class RateLimitGuard implements CanActivate {
-  private readonly buckets = new Map<string, Bucket>();
-  private lastSweep = Date.now();
-
   constructor(
     private readonly reflector: Reflector,
     @Inject(CONFIG_TOKEN) private readonly config: Env,
+    @Inject(RATE_LIMIT_STORE) private readonly store: RateLimitStore,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     if (!this.config.RATE_LIMIT_ENABLED) return true;
 
     const skip = this.reflector.getAllAndOverride<boolean>(SKIP_RATE_LIMIT_KEY, [
@@ -81,35 +74,18 @@ export class RateLimitGuard implements CanActivate {
     const key = `${identity}|${routeKey}|${options.limit}`;
 
     const now = Date.now();
-    this.sweep(now);
+    const window = await this.store.hit(key, options.windowSeconds, now);
 
-    const bucket = this.buckets.get(key);
-    if (!bucket || bucket.resetAt <= now) {
-      this.buckets.set(key, { count: 1, resetAt: now + options.windowSeconds * 1000 });
-      setRateLimitHeaders(response, options.limit, options.limit - 1, options.windowSeconds);
-      return true;
-    }
-
-    bucket.count += 1;
-    const remaining = Math.max(0, options.limit - bucket.count);
-    const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    const remaining = Math.max(0, options.limit - window.count);
+    const retryAfter = Math.max(1, Math.ceil((window.resetAt - now) / 1000));
     setRateLimitHeaders(response, options.limit, remaining, retryAfter);
 
-    if (bucket.count > options.limit) {
+    if (window.count > options.limit) {
       response.setHeader('Retry-After', String(retryAfter));
       throw new RateLimitError(retryAfter);
     }
 
     return true;
-  }
-
-  /** Drops expired buckets occasionally so the map cannot grow without bound. */
-  private sweep(now: number): void {
-    if (now - this.lastSweep < 60_000) return;
-    this.lastSweep = now;
-    for (const [key, bucket] of this.buckets) {
-      if (bucket.resetAt <= now) this.buckets.delete(key);
-    }
   }
 }
 

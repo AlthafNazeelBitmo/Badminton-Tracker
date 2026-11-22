@@ -48,9 +48,7 @@ async function main(): Promise<void> {
 
     for (const job of jobs) {
       const result =
-        job === 'reminders'
-          ? await maintenance.runReminders()
-          : await maintenance.purgeExpiredIdempotencyKeys();
+        job === 'reminders' ? await maintenance.runReminders() : await maintenance.runCleanup();
       console.info(JSON.stringify({ job, ...result }));
     }
   } finally {

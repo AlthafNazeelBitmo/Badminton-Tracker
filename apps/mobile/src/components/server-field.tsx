@@ -43,7 +43,7 @@ export function useServerField() {
   const explain = (failure: unknown): string => {
     if (failure instanceof NetworkError) {
       return serverAddressEditable
-        ? `Could not reach ${displayServerAddress()}. Check the address, that the API is running, and that this phone is on the same Wi-Fi.`
+        ? `Could not reach ${displayServerAddress()}. Check your connection and the address. For an API on a computer, check that it is running and this phone is on the same Wi-Fi.`
         : 'Could not reach the server. Check your connection and try again.';
     }
     return describeError(failure);
@@ -57,8 +57,8 @@ export function useServerField() {
       autoCapitalize="none"
       autoCorrect={false}
       keyboardType="url"
-      placeholder="192.168.1.23:4000"
-      hint="The address of the computer running the API, on this Wi-Fi."
+      placeholder="https://badminton-tracker-api.vercel.app"
+      hint="Leave as it is for the hosted server, or enter a computer on this Wi-Fi that runs the API."
       error={error}
     />
   ) : null;

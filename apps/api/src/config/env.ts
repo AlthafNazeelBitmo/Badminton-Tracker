@@ -57,6 +57,12 @@ export const envSchema = z
     RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
     AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).default(300),
+    /**
+     * Where rate-limit counts are kept. `memory` suits one long-running process;
+     * `database` is required wherever requests are spread over many instances —
+     * serverless hosting above all, where a memory count resets on every cold start.
+     */
+    RATE_LIMIT_STORE: z.enum(['memory', 'database']).default('memory'),
 
     LOG_LEVEL: z.enum(['error', 'warn', 'log', 'debug', 'verbose']).default('log'),
     LOG_JSON: booleanish.default(false),
@@ -81,6 +87,18 @@ export const envSchema = z
      * for the Expo project; without it, Expo accepts pushes to any valid token.
      */
     EXPO_ACCESS_TOKEN: z.string().optional(),
+    /**
+     * Shared secret for `GET /api/v1/internal/cron`, the endpoint a platform scheduler
+     * (Vercel Cron) calls to run reminders and housekeeping. Sent by the scheduler as
+     * `Authorization: Bearer <secret>`. Unset, the endpoint does not exist.
+     */
+    CRON_SECRET: secret.optional(),
+    /**
+     * Shared with the web app's proxy, which forwards `/api/*` here when the two are
+     * separate deployments. With it, the proxy can pass on the visitor's address, so
+     * rate limits apply per visitor rather than to the proxy. See trusted-proxy.ts.
+     */
+    TRUSTED_PROXY_SECRET: secret.optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;

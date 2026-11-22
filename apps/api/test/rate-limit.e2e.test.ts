@@ -17,7 +17,12 @@ import { PrismaService } from '../src/prisma/prisma.service';
  * Everything here is per-file: Vitest gives each test file its own process, so mutating
  * the environment in `beforeAll` cannot affect the other suites.
  */
-describe('rate limiting', () => {
+/**
+ * Run against both stores. `memory` is what a single long-running process uses;
+ * `database` is what serverless hosting uses, where each request may land on a
+ * different instance. The behaviour a client sees must be identical.
+ */
+describe.each(['memory', 'database'] as const)('rate limiting (%s store)', (store) => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let previous: string | undefined;
@@ -40,6 +45,7 @@ describe('rate limiting', () => {
     // Low enough that a test can reach the ceiling in a handful of requests.
     process.env.RATE_LIMIT_MAX = '5';
     process.env.RATE_LIMIT_WINDOW_SECONDS = '60';
+    process.env.RATE_LIMIT_STORE = store;
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
@@ -47,7 +53,9 @@ describe('rate limiting', () => {
     app.use(cookieParser());
     app.setGlobalPrefix('api', { exclude: ['health/live', 'health/ready'] });
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-    await app.init();
+    // Listening, rather than only initialised: otherwise supertest starts a throwaway
+    // server per request, and a burst of parallel requests becomes a burst of servers.
+    await app.listen(0, '127.0.0.1');
 
     prisma = app.get(PrismaService);
   });
@@ -129,6 +137,19 @@ describe('rate limiting', () => {
 
     // Exhausting one endpoint must not take the rest of the app down with it.
     await agent.get('/api/v1/venues').expect(200);
+  });
+
+  it('admits exactly the budget when requests arrive all at once', async () => {
+    // A burst in parallel is how a limiter with a read-then-write race is beaten: every
+    // request reads the same count, and all of them get in. The budget is 5.
+    const agent = await registerThrough(http(), 'burst');
+    const responses = await Promise.all(
+      Array.from({ length: 12 }, () => agent.get('/api/v1/players')),
+    );
+    const statuses = responses.map((response) => response.status);
+
+    expect(statuses.filter((status) => status === 200)).toHaveLength(5);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(7);
   });
 
   it('exempts the health probes, which monitoring hits constantly', async () => {

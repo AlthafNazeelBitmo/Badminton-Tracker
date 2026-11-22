@@ -33,13 +33,15 @@ const VARIANTS: Record<
     name: 'Badminton (Preview)',
     identifierSuffix: '.preview',
     scheme: 'badminton-preview',
-    defaultApiUrl: 'https://staging-api.badminton.example/api/v1',
+    // The hosted API (Vercel + Neon). A preview build can still be pointed at a laptop
+    // from the Server field on the sign-in screen.
+    defaultApiUrl: 'https://badminton-tracker-api.vercel.app/api/v1',
   },
   production: {
     name: 'Badminton Tracker',
     identifierSuffix: '',
     scheme: 'badminton',
-    defaultApiUrl: 'https://api.badminton.example/api/v1',
+    defaultApiUrl: 'https://badminton-tracker-api.vercel.app/api/v1',
   },
 };
 

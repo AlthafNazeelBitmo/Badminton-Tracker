@@ -646,3 +646,19 @@ model IdempotencyKey {
   @@index([expiresAt])
   @@map("idempotency_keys")
 }
+
+/// One fixed rate-limit window, when the limiter is configured to keep its counts in the
+/// database (`RATE_LIMIT_STORE=database`). Needed where requests are served by many
+/// short-lived instances, each of which would otherwise keep its own count — on a
+/// serverless platform an attacker would get a fresh budget from every cold start.
+///
+/// Rows are written with a single upsert per request and swept by the cleanup job.
+model RateLimitBucket {
+  /// Identity, route and limit, joined: `user-id|POST:/api/v1/auth/login|10`.
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limit_buckets")
+}

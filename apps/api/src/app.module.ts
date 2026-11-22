@@ -22,6 +22,12 @@ import { JobsModule } from './jobs/jobs.module';
 import { HealthController } from './health/health.controller';
 import { AllExceptionsFilter } from './common/http-exception.filter';
 import { RateLimitGuard } from './common/rate-limit.guard';
+import {
+  DatabaseRateLimitStore,
+  MemoryRateLimitStore,
+  RATE_LIMIT_STORE,
+} from './common/rate-limit.store';
+import { PrismaService } from './prisma/prisma.service';
 import { RequestContextMiddleware } from './common/request-context.middleware';
 import { IdempotencyInterceptor } from './common/idempotency.interceptor';
 
@@ -64,6 +70,14 @@ import { IdempotencyInterceptor } from './common/idempotency.interceptor';
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: AuthGuard },
+    {
+      provide: RATE_LIMIT_STORE,
+      inject: [CONFIG_TOKEN, PrismaService],
+      useFactory: (config: Env, prisma: PrismaService) =>
+        config.RATE_LIMIT_STORE === 'database'
+          ? new DatabaseRateLimitStore(prisma)
+          : new MemoryRateLimitStore(),
+    },
     { provide: APP_GUARD, useClass: RateLimitGuard },
     // Runs after the guards, so `request.user` is populated and keys can be scoped
     // to the account rather than shared across all callers.
