@@ -52,7 +52,7 @@ export default function MatchDetailPage() {
 
   return (
     <>
-      <Link href="/matches" className="mb-3 inline-block text-sm text-accent hover:underline">
+      <Link href="/matches" className="mb-3 inline-block text-sm text-accent-text hover:underline">
         ← All matches
       </Link>
 
@@ -191,7 +191,7 @@ export default function MatchDetailPage() {
                     <li key={person.playerId}>
                       <Link
                         href={`/opponents?player=${person.playerId}`}
-                        className="text-sm text-accent hover:underline"
+                        className="text-sm text-accent-text hover:underline"
                       >
                         {person.name}
                       </Link>
@@ -209,7 +209,7 @@ export default function MatchDetailPage() {
               <Row label="Session">
                 <Link
                   href={`/calendar?date=${match.session.date}`}
-                  className="text-accent hover:underline"
+                  className="text-accent-text hover:underline"
                 >
                   {formatDate(match.session.date)} ·{' '}
                   {SESSION_TYPE_LABELS[match.session.sessionType]}

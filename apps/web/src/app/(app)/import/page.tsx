@@ -127,7 +127,7 @@ export default function ImportExportPage() {
               <button
                 type="button"
                 onClick={() => void getTemplate()}
-                className="text-xs font-medium text-accent hover:underline"
+                className="text-xs font-medium text-accent-text hover:underline"
               >
                 Get template
               </button>
@@ -175,7 +175,10 @@ export default function ImportExportPage() {
             </Button>
 
             {previewError ? (
-              <div role="alert" className="rounded border border-loss px-3 py-2 text-sm text-loss">
+              <div
+                role="alert"
+                className="rounded-lg border border-loss px-3 py-2 text-sm text-loss"
+              >
                 <p>{previewError.message}</p>
                 {previewError.details?.length ? (
                   <ul className="mt-1 list-inside list-disc text-xs">
@@ -190,7 +193,7 @@ export default function ImportExportPage() {
             {committed ? (
               <p
                 role="status"
-                className="rounded border border-line bg-accent-soft px-3 py-2 text-sm text-ink"
+                className="rounded-lg border border-line bg-accent-soft px-3 py-2 text-sm text-ink"
               >
                 {committed}
               </p>
@@ -219,7 +222,7 @@ export default function ImportExportPage() {
           {commitError ? (
             <p
               role="alert"
-              className="mx-4 mt-3 rounded border border-loss px-3 py-2 text-sm text-loss sm:mx-5"
+              className="mx-4 mt-3 rounded-lg border border-loss px-3 py-2 text-sm text-loss sm:mx-5"
             >
               {commitError.message}
             </p>
@@ -284,7 +287,7 @@ export default function ImportExportPage() {
                     <td className="px-3 py-2 text-ink-secondary">
                       {row.opponentNames.join(' & ') || '—'}
                       {row.newPlayers.length > 0 ? (
-                        <span className="ml-1 text-xs text-accent">
+                        <span className="ml-1 text-xs text-accent-text">
                           (+{row.newPlayers.length} new)
                         </span>
                       ) : null}

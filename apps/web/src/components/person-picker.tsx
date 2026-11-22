@@ -5,8 +5,8 @@ import { mutate as globalMutate } from 'swr';
 import type { PlayerSummary } from '@badminton/contracts';
 import { api } from '@/lib/api';
 import { useAction } from '@/lib/hooks';
-import { initials } from '@/lib/format';
-import { Button, Input, Spinner, cx } from './ui';
+import { X } from 'lucide-react';
+import { Avatar, Button, Input, Spinner, cx } from './ui';
 
 /**
  * Picks the people in a match.
@@ -108,7 +108,7 @@ export function PersonPicker({
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium text-ink">{label}</span>
+        <span className="text-[13px] font-medium text-ink-secondary">{label}</span>
         <span className="text-xs text-ink-muted">
           {selected.length} of {max}
         </span>
@@ -123,10 +123,11 @@ export function PersonPicker({
                 <button
                   type="button"
                   onClick={() => remove(playerId)}
-                  className="inline-flex items-center gap-1.5 rounded-sm border border-accent bg-accent-soft px-2.5 py-1.5 text-sm text-accent"
+                  className="inline-flex items-center gap-2 rounded-full bg-ink py-1 pl-1 pr-2.5 text-sm font-medium text-[var(--surface-2)] shadow-lift transition-opacity hover:opacity-90"
                 >
+                  <Avatar name={player?.name ?? '?'} size="xs" className="size-6" />
                   {player?.name ?? 'Unknown'}
-                  <span aria-hidden="true">×</span>
+                  <X className="size-3.5 opacity-60" aria-hidden="true" />
                   <span className="sr-only">Remove {player?.name ?? 'player'}</span>
                 </button>
               </li>
@@ -171,19 +172,14 @@ export function PersonPicker({
                     type="button"
                     onClick={() => select(player.id)}
                     className={cx(
-                      'inline-flex items-center gap-2 rounded-sm border border-line bg-surface-raised py-1.5 pl-1.5 pr-2.5',
-                      'text-sm text-ink transition-colors hover:border-accent',
+                      'inline-flex items-center gap-2 rounded-full border border-line bg-surface-raised py-1 pl-1 pr-3 shadow-card',
+                      'text-sm text-ink transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-line-strong',
                     )}
                   >
-                    <span
-                      aria-hidden="true"
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-sunken text-[10px] font-semibold text-ink-secondary"
-                    >
-                      {initials(player.name)}
-                    </span>
+                    <Avatar name={player.name} size="xs" className="size-6" />
                     {player.name}
                     {player.matchesPlayed > 0 ? (
-                      <span className="text-xs text-ink-muted">{player.matchesPlayed}</span>
+                      <span className="tabular text-xs text-ink-muted">{player.matchesPlayed}</span>
                     ) : null}
                   </button>
                 </li>
@@ -201,7 +197,7 @@ export function PersonPicker({
             <button
               type="button"
               onClick={() => setShowAll(true)}
-              className="mt-2 text-xs text-accent hover:underline"
+              className="mt-2 text-xs text-accent-text hover:underline"
             >
               Show {hiddenCount} more
             </button>

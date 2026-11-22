@@ -1,5 +1,6 @@
 'use client';
 
+import { Check, Clock3, Target, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
   GOAL_METRICS,
@@ -19,7 +20,7 @@ import {
   ErrorState,
   Field,
   Input,
-  Meter,
+  Ring,
   PageHeader,
   Select,
   Skeleton,
@@ -75,7 +76,7 @@ export default function GoalsPage() {
         <Card>
           <EmptyState
             title="No goals yet"
-            icon="🎯"
+            icon={<Target />}
             description="A goal turns a vague intention into something the dashboard can measure — 100 matches this year, or a 60% win rate."
             action={
               <Button variant="primary" onClick={() => setCreating(true)}>
@@ -91,7 +92,7 @@ export default function GoalsPage() {
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 In progress
               </h2>
-              <ul className="space-y-3">
+              <ul className="grid gap-4 lg:grid-cols-2">
                 {active.map((goal) => (
                   <GoalCard key={goal.id} goal={goal} onChanged={() => void mutate()} />
                 ))}
@@ -104,7 +105,7 @@ export default function GoalsPage() {
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Finished
               </h2>
-              <ul className="space-y-3">
+              <ul className="grid gap-4 lg:grid-cols-2">
                 {finished.map((goal) => (
                   <GoalCard key={goal.id} goal={goal} onChanged={() => void mutate()} />
                 ))}
@@ -129,56 +130,76 @@ function GoalCard({ goal, onChanged }: { goal: GoalProgress; onChanged: () => vo
 
   const tone = goal.status === 'ACHIEVED' ? 'win' : goal.status === 'MISSED' ? 'loss' : 'neutral';
 
+  const achieved = goal.status === 'ACHIEVED';
+
   return (
     <li>
-      <Card className="card-pad">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-medium text-ink">{goal.title}</h3>
-              <Badge tone={tone}>
-                {goal.status === 'ACHIEVED'
-                  ? 'Achieved'
-                  : goal.status === 'MISSED'
-                    ? 'Missed'
-                    : goal.status === 'ARCHIVED'
-                      ? 'Archived'
-                      : 'Active'}
-              </Badge>
-            </div>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              {GOAL_METRIC_LABELS[goal.metric]}
-              {goal.discipline ? ` · ${goal.discipline.toLowerCase().replace('_', ' ')}` : ''}
-              {goal.deadline ? ` · by ${formatDate(goal.deadline)}` : ''}
-            </p>
-          </div>
-
-          <p className="tabular shrink-0 text-sm font-medium">
-            {formatValue(goal.currentValue)}{' '}
-            <span className="text-ink-muted">of {formatValue(goal.targetValue)}</span>
-          </p>
-        </div>
-
-        <Meter
-          className="mt-3"
-          value={goal.percentComplete}
-          max={100}
+      <Card className="card-pad flex h-full gap-5">
+        <Ring
+          value={goal.percentComplete / 100}
+          size={84}
+          stroke={8}
           label={`${goal.title}: ${goal.percentComplete}% complete`}
-        />
+        >
+          {achieved ? (
+            <Check className="size-6 text-win" strokeWidth={3} aria-hidden="true" />
+          ) : (
+            <span className="tabular text-base font-semibold tracking-tight">
+              {Math.round(goal.percentComplete)}%
+            </span>
+          )}
+        </Ring>
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-secondary">
-          <span>
-            {goal.percentComplete}% complete
-            {goal.daysRemaining !== null && goal.status === 'ACTIVE'
-              ? goal.daysRemaining >= 0
-                ? ` · ${goal.daysRemaining} day${goal.daysRemaining === 1 ? '' : 's'} left`
-                : ' · deadline passed'
-              : ''}
-            {goal.requiredDailyPace !== null ? ` · needs ${goal.requiredDailyPace} per day` : ''}
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => void remove()} loading={isPending}>
-            Delete
-          </Button>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold tracking-tight text-ink">{goal.title}</h3>
+            <button
+              type="button"
+              onClick={() => void remove()}
+              disabled={isPending}
+              title="Delete goal"
+              className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-loss-soft hover:text-loss"
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+              <span className="sr-only">Delete {goal.title}</span>
+            </button>
+          </div>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            {GOAL_METRIC_LABELS[goal.metric]}
+            {goal.discipline ? ` · ${goal.discipline.toLowerCase().replace('_', ' ')}` : ''}
+            {goal.deadline ? ` · by ${formatDate(goal.deadline)}` : ''}
+          </p>
+
+          <p className="tabular mt-3 text-2xl font-semibold tracking-[-0.03em]">
+            {formatValue(goal.currentValue)}
+            <span className="text-base font-medium text-ink-muted">
+              {' '}
+              / {formatValue(goal.targetValue)}
+            </span>
+          </p>
+
+          <div className="mt-auto flex flex-wrap items-center gap-2 pt-3 text-xs text-ink-secondary">
+            <Badge tone={tone}>
+              {goal.status === 'ACHIEVED'
+                ? 'Achieved'
+                : goal.status === 'MISSED'
+                  ? 'Missed'
+                  : goal.status === 'ARCHIVED'
+                    ? 'Archived'
+                    : 'Active'}
+            </Badge>
+            {goal.daysRemaining !== null && goal.status === 'ACTIVE' ? (
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="size-3" aria-hidden="true" />
+                {goal.daysRemaining >= 0
+                  ? `${goal.daysRemaining} day${goal.daysRemaining === 1 ? '' : 's'} left`
+                  : 'Deadline passed'}
+              </span>
+            ) : null}
+            {goal.requiredDailyPace !== null ? (
+              <span>needs {goal.requiredDailyPace} per day</span>
+            ) : null}
+          </div>
         </div>
       </Card>
     </li>

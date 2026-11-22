@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Check, ChevronDown, CircleCheck } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_SCORING_RULES,
@@ -149,8 +150,9 @@ export default function RecordMatchPage() {
   }, [saved]);
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <PageHeader
+        eyebrow="Quick entry"
         title="Record a match"
         description="Pick who played, tap in the scores, save. Everything else is optional."
       />
@@ -160,9 +162,10 @@ export default function RecordMatchPage() {
           ref={savedRef}
           tabIndex={-1}
           role="status"
-          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-accent-soft px-4 py-3"
+          className="animate-in mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-win/25 bg-win-soft px-4 py-3"
         >
-          <p className="text-sm text-ink">
+          <p className="flex items-center gap-2 text-sm text-ink">
+            <CircleCheck className="size-4 text-win" aria-hidden="true" />
             <strong>Saved.</strong> Recorded as a {saved.toLowerCase()}. Ready for the next one.
           </p>
           <div className="flex gap-2">
@@ -187,7 +190,9 @@ export default function RecordMatchPage() {
         {/* Step 1 — discipline */}
         <Card className="card-pad">
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-ink">Format</legend>
+            <legend className="mb-3 flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink">
+              <StepNumber n={1} /> Format
+            </legend>
             <div className="grid grid-cols-3 gap-2">
               {DISCIPLINE_OPTIONS.map((option) => {
                 const active = discipline === option.value;
@@ -198,14 +203,16 @@ export default function RecordMatchPage() {
                     aria-pressed={active}
                     onClick={() => setDiscipline(option.value)}
                     className={cx(
-                      'flex h-14 flex-col items-center justify-center rounded border text-sm transition-colors',
+                      'flex h-16 flex-col items-center justify-center gap-0.5 rounded-xl border text-sm font-medium transition-all duration-150',
                       active
-                        ? 'border-accent bg-accent-soft font-medium text-accent'
-                        : 'border-line bg-surface-raised text-ink-secondary hover:border-line-strong',
+                        ? 'border-ink bg-ink text-[var(--surface-2)] shadow-lift'
+                        : 'border-line bg-surface-raised text-ink-secondary shadow-card hover:border-line-strong hover:text-ink',
                     )}
                   >
                     {option.label}
-                    <span className="text-xs text-ink-muted">{option.sides}</span>
+                    <span className={cx('text-xs', active ? 'opacity-60' : 'text-ink-muted')}>
+                      {option.sides}
+                    </span>
                   </button>
                 );
               })}
@@ -214,7 +221,10 @@ export default function RecordMatchPage() {
         </Card>
 
         {/* Step 2 — who played */}
-        <Card className="card-pad space-y-4">
+        <Card className="card-pad space-y-5">
+          <p className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink">
+            <StepNumber n={2} /> Who played
+          </p>
           {partnersNeeded > 0 ? (
             <PersonPicker
               label="Your partner"
@@ -240,6 +250,9 @@ export default function RecordMatchPage() {
 
         {/* Step 3 — scores */}
         <Card className="card-pad">
+          <p className="mb-4 flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink">
+            <StepNumber n={3} /> Result
+          </p>
           <ScoreEntry games={games} onChange={setGames} scoring={scoring} />
 
           {validation && !validation.valid ? (
@@ -264,12 +277,20 @@ export default function RecordMatchPage() {
             type="button"
             onClick={() => setShowOptional((open) => !open)}
             aria-expanded={showOptional}
-            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-ink sm:px-5"
+            className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left text-sm font-semibold tracking-tight text-ink sm:px-5"
           >
-            When and where, and how it felt
-            <span aria-hidden="true" className="text-ink-muted">
-              {showOptional ? '−' : '+'}
+            <span className="flex items-center gap-2.5">
+              <StepNumber n={4} muted />
+              When and where, and how it felt
+              <span className="font-normal text-ink-muted">· optional</span>
             </span>
+            <ChevronDown
+              aria-hidden="true"
+              className={cx(
+                'size-4 text-ink-muted transition-transform duration-200',
+                showOptional && 'rotate-180',
+              )}
+            />
           </button>
 
           {showOptional ? (
@@ -364,9 +385,9 @@ export default function RecordMatchPage() {
                           )
                         }
                         className={cx(
-                          'rounded-sm border px-2.5 py-1 text-xs transition-colors',
+                          'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                           active
-                            ? 'border-accent bg-accent-soft text-accent'
+                            ? 'border-accent-text/40 bg-accent-soft text-accent-text'
                             : 'border-line text-ink-secondary hover:border-line-strong',
                         )}
                       >
@@ -396,7 +417,10 @@ export default function RecordMatchPage() {
         </Card>
 
         {error ? (
-          <div role="alert" className="rounded border border-loss px-4 py-3 text-sm text-loss">
+          <div
+            role="alert"
+            className="rounded-xl border border-loss/30 bg-loss-soft px-4 py-3 text-sm text-loss"
+          >
             <p>{error.message}</p>
             {error.details?.length ? (
               <ul className="mt-1 list-inside list-disc">
@@ -409,7 +433,7 @@ export default function RecordMatchPage() {
         ) : null}
 
         {/* Sticky on mobile: the save button is always in reach without scrolling. */}
-        <div className="sticky bottom-nav z-20 -mx-4 border-t border-line bg-surface px-4 py-3 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0">
+        <div className="sticky bottom-nav z-20 -mx-4 border-t border-line bg-surface-raised/90 px-4 py-3 backdrop-blur-xl lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
           <Button
             type="submit"
             variant="primary"
@@ -418,7 +442,7 @@ export default function RecordMatchPage() {
             loading={isPending}
             disabled={!canSave}
           >
-            Save match
+            <Check strokeWidth={2.5} /> Save match
           </Button>
           {!canSave ? (
             <p className="mt-2 text-xs text-ink-muted lg:hidden">
@@ -431,7 +455,7 @@ export default function RecordMatchPage() {
           ) : null}
         </div>
       </form>
-    </>
+    </div>
   );
 }
 
@@ -457,5 +481,20 @@ function RatingSelect({
         ))}
       </Select>
     </Field>
+  );
+}
+
+/** The step marker on each section of the form: the order is the fastest path. */
+function StepNumber({ n, muted }: { n: number; muted?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        'flex size-6 items-center justify-center rounded-full text-xs font-semibold',
+        muted ? 'bg-surface-sunken text-ink-muted' : 'bg-accent text-accent-ink',
+      )}
+    >
+      {n}
+    </span>
   );
 }

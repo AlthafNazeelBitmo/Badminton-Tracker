@@ -23,7 +23,15 @@ import {
   WonLostBars,
 } from '@/components/charts';
 import { FilterBar } from '@/components/filter-bar';
-import { Card, CardHeader, ErrorState, PageHeader, Skeleton, Stat } from '@/components/ui';
+import {
+  Card,
+  CardHeader,
+  ErrorState,
+  PageHeader,
+  Segmented,
+  Skeleton,
+  Stat,
+} from '@/components/ui';
 import { StatsTable } from '@/components/stats-table';
 
 type Granularity = 'WEEK' | 'MONTH' | 'YEAR';
@@ -61,25 +69,19 @@ export default function AnalyticsPage() {
 
       <FilterBar filter={filter} onChange={update} className="mb-4" />
 
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-xs font-medium text-ink-secondary">Group by</span>
-        <div role="group" aria-label="Granularity" className="flex gap-1">
-          {(['WEEK', 'MONTH', 'YEAR'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={granularity === value}
-              onClick={() => setGranularity(value)}
-              className={
-                granularity === value
-                  ? 'rounded-sm border border-accent bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent'
-                  : 'rounded-sm border border-line px-3 py-1.5 text-xs text-ink-secondary hover:border-line-strong'
-              }
-            >
-              {value === 'WEEK' ? 'Week' : value === 'MONTH' ? 'Month' : 'Year'}
-            </button>
-          ))}
-        </div>
+      <div className="mb-6 flex items-center gap-3">
+        <span className="eyebrow">Group by</span>
+        <Segmented
+          label="Granularity"
+          size="sm"
+          value={granularity}
+          onChange={setGranularity}
+          options={[
+            { value: 'WEEK', label: 'Week' },
+            { value: 'MONTH', label: 'Month' },
+            { value: 'YEAR', label: 'Year' },
+          ]}
+        />
       </div>
 
       <div className="space-y-4">

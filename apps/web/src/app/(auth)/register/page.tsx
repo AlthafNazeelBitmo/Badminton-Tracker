@@ -7,7 +7,7 @@ import { PASSWORD_MIN_LENGTH, registerSchema } from '@badminton/contracts';
 import { api } from '@/lib/api';
 import { useAction } from '@/lib/hooks';
 import { browserTimeZone } from '@/lib/format';
-import { Button, Card, Field, Input } from '@/components/ui';
+import { Button, Field, Input } from '@/components/ui';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -36,12 +36,12 @@ export default function RegisterPage() {
     setForm((current) => ({ ...current, [key]: value }));
 
   return (
-    <Card className="w-full max-w-sm p-6">
-      <h1 className="text-lg font-semibold tracking-tight">Create your account</h1>
+    <div className="w-full max-w-sm">
+      <h1 className="text-[28px] font-semibold tracking-[-0.03em]">Create your account</h1>
       <p className="mt-1 text-sm text-ink-secondary">Start recording matches in under a minute.</p>
 
       <form
-        className="mt-5 space-y-4"
+        className="mt-8 space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           void run();
@@ -102,12 +102,15 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-5 text-center text-sm text-ink-secondary">
+      <p className="mt-8 text-center text-sm text-ink-secondary">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-accent underline-offset-2 hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-accent-text underline-offset-2 hover:underline"
+        >
           Sign in
         </Link>
       </p>
-    </Card>
+    </div>
   );
 }

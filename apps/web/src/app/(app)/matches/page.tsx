@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronRight, Clock3, MapPin, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   DISCIPLINES,
@@ -13,6 +14,8 @@ import { buildQuery } from '@/lib/api';
 import { useMatches } from '@/lib/hooks';
 import { duration, formatDate, joinNames, scoreline, signed } from '@/lib/format';
 import {
+  Avatar,
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -20,7 +23,10 @@ import {
   PageHeader,
   ResultBadge,
   Skeleton,
+  buttonClass,
+  controlClasses,
   cx,
+  selectClasses,
 } from '@/components/ui';
 
 type Sort = ListMatchesQuery['sort'];
@@ -83,25 +89,29 @@ export default function MatchesPage() {
             : undefined
         }
         action={
-          <Link
-            href="/record"
-            className="inline-flex h-11 items-center rounded bg-accent px-4 text-sm font-medium text-accent-ink"
-          >
-            Record
+          <Link href="/record" className={buttonClass('primary')}>
+            <Plus strokeWidth={2.5} />
+            Record match
           </Link>
         }
       />
 
-      <Card className="mb-4 p-3">
+      <div className="mb-6">
         <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr]">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search opponents or notes"
-            aria-label="Search matches"
-            className="h-10 w-full rounded border border-line bg-surface-raised px-3 text-sm"
-          />
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search opponents or notes"
+              aria-label="Search matches"
+              className={cx(controlClasses, 'h-10 pl-9')}
+            />
+          </div>
           <select
             value={result}
             onChange={(event) => {
@@ -109,7 +119,7 @@ export default function MatchesPage() {
               setPage(1);
             }}
             aria-label="Filter by result"
-            className="h-10 rounded border border-line bg-surface-raised px-2 text-sm"
+            className={cx(selectClasses, 'h-10')}
           >
             <option value="">All results</option>
             {MATCH_RESULTS.map((value) => (
@@ -125,7 +135,7 @@ export default function MatchesPage() {
               setPage(1);
             }}
             aria-label="Filter by discipline"
-            className="h-10 rounded border border-line bg-surface-raised px-2 text-sm"
+            className={cx(selectClasses, 'h-10')}
           >
             <option value="">All formats</option>
             {DISCIPLINES.map((value) => (
@@ -141,7 +151,7 @@ export default function MatchesPage() {
               setPage(1);
             }}
             aria-label="Sort matches"
-            className="h-10 rounded border border-line bg-surface-raised px-2 text-sm"
+            className={cx(selectClasses, 'h-10')}
           >
             {SORTS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -150,7 +160,7 @@ export default function MatchesPage() {
             ))}
           </select>
         </div>
-      </Card>
+      </div>
 
       {isLoading && !data ? (
         <div className="space-y-2">
@@ -173,7 +183,7 @@ export default function MatchesPage() {
         <div className="space-y-5">
           {grouped.map(([day, matches]) => (
             <section key={day}>
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              <h2 className="eyebrow mb-2.5 px-1">
                 {formatDate(day, {
                   weekday: 'long',
                   day: 'numeric',
@@ -181,7 +191,7 @@ export default function MatchesPage() {
                   year: 'numeric',
                 })}
               </h2>
-              <Card className="divide-y divide-line">
+              <Card className="divide-y divide-line overflow-hidden">
                 {matches.map((match) => (
                   <MatchRow key={match.id} match={match} />
                 ))}
@@ -217,39 +227,75 @@ export default function MatchesPage() {
 }
 
 function MatchRow({ match }: { match: MatchSummary }) {
+  const opponents = match.opponents.map((person) => person.name);
   return (
     <Link
       href={`/matches/${match.id}`}
-      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-sunken sm:px-5"
+      className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-ink/[0.025] sm:px-5"
     >
       <ResultBadge result={match.derived.result} />
 
+      <div className="hidden -space-x-2 sm:flex">
+        {opponents.slice(0, 2).map((name) => (
+          <Avatar key={name} name={name} size="md" className="ring-2 ring-surface-raised" />
+        ))}
+      </div>
+
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-ink">
+          {joinNames(opponents)}
           {match.partners.length > 0 ? (
-            <>
-              <span className="text-ink-secondary">with </span>
-              {joinNames(match.partners.map((person) => person.name))}
-              <span className="text-ink-secondary"> v </span>
-            </>
+            <span className="font-normal text-ink-muted">
+              {' '}
+              · with {joinNames(match.partners.map((person) => person.name))}
+            </span>
           ) : null}
-          {joinNames(match.opponents.map((person) => person.name))}
         </p>
-        <p className="tabular mt-0.5 truncate text-xs text-ink-secondary">
-          {scoreline(match.games)}
-        </p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
-          <span>{DISCIPLINE_LABELS[match.discipline]}</span>
-          {match.venue ? <span>· {match.venue.name}</span> : null}
-          {match.durationSeconds ? <span>· {duration(match.durationSeconds)}</span> : null}
-          {match.derived.isComeback ? <span className="text-win">· comeback</span> : null}
-          {match.derived.isCollapse ? <span className="text-loss">· collapse</span> : null}
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+          <span className="inline-flex items-center gap-1 rounded-md bg-surface-sunken px-1.5 py-0.5 font-medium text-ink-secondary">
+            {DISCIPLINE_LABELS[match.discipline]}
+          </span>
+          {match.venue ? (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-3" aria-hidden="true" />
+              {match.venue.name}
+            </span>
+          ) : null}
+          {match.durationSeconds ? (
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="size-3" aria-hidden="true" />
+              {duration(match.durationSeconds)}
+            </span>
+          ) : null}
+          {match.derived.isComeback ? <Badge tone="win">Comeback</Badge> : null}
+          {match.derived.isCollapse ? <Badge tone="loss">Collapse</Badge> : null}
         </p>
       </div>
 
+      {/* The chips are for the eye; the scoreline after them is the text, read once. */}
+      <ol className="hidden items-center gap-1 md:flex" aria-hidden="true">
+        {match.games.map((game, index) => {
+          const won = game.myScore > game.opponentScore;
+          return (
+            <li
+              key={index}
+              className={cx(
+                'tabular rounded-md px-2 py-1 font-mono text-xs',
+                won ? 'bg-win-soft font-semibold text-win' : 'bg-surface-sunken text-ink-secondary',
+              )}
+            >
+              {game.myScore}–{game.opponentScore}
+            </li>
+          );
+        })}
+      </ol>
+      <span className="tabular font-mono text-xs text-ink-secondary md:sr-only">
+        {scoreline(match.games)}
+      </span>
+
       <span
         className={cx(
-          'tabular shrink-0 text-sm font-medium',
+          'tabular w-10 shrink-0 text-right text-sm font-semibold',
           match.derived.pointDifferential > 0
             ? 'text-win'
             : match.derived.pointDifferential < 0
@@ -259,6 +305,10 @@ function MatchRow({ match }: { match: MatchSummary }) {
       >
         {signed(match.derived.pointDifferential)}
       </span>
+      <ChevronRight
+        className="hidden size-4 shrink-0 text-ink-muted transition-transform group-hover:translate-x-0.5 sm:block"
+        aria-hidden="true"
+      />
     </Link>
   );
 }

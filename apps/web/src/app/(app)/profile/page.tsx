@@ -285,11 +285,11 @@ export default function ProfilePage() {
                       onClick={() => setScoring({ ...preset })}
                       className={
                         active
-                          ? 'rounded-sm border border-accent bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent'
-                          : 'rounded-sm border border-line px-3 py-1.5 text-xs text-ink-secondary hover:border-line-strong'
+                          ? 'rounded-full border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-[var(--surface-2)]'
+                          : 'rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink-secondary shadow-card hover:border-line-strong hover:text-ink'
                       }
                     >
-                      {titleCase(key)}
+                      {titleCase(key).replace(/^Bwf/, 'BWF')}
                     </button>
                   );
                 })}

@@ -1,5 +1,6 @@
 'use client';
 
+import { Contact, ListOrdered, Merge, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
@@ -10,8 +11,9 @@ import {
 } from '@badminton/contracts';
 import { api } from '@/lib/api';
 import { invalidateMatchData, useAction, usePlayers } from '@/lib/hooks';
-import { formatShortDate, initials, titleCase } from '@/lib/format';
+import { formatShortDate, titleCase } from '@/lib/format';
 import {
+  Avatar,
   Badge,
   Button,
   Card,
@@ -22,6 +24,7 @@ import {
   PageHeader,
   Select,
   Skeleton,
+  Spinner,
 } from '@/components/ui';
 
 /**
@@ -84,7 +87,7 @@ export default function PlayersPage() {
         <Card>
           <EmptyState
             title="No players yet"
-            icon="📇"
+            icon={<Contact />}
             description="Players are created automatically as you record matches — just type a name."
           />
         </Card>
@@ -123,13 +126,8 @@ function PlayerRow({
   });
 
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-      <span
-        aria-hidden="true"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-xs font-semibold text-ink-secondary"
-      >
-        {initials(player.name)}
-      </span>
+    <div className="group flex flex-wrap items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-ink/[0.02] sm:px-5">
+      <Avatar name={player.name} size="md" />
 
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
@@ -137,9 +135,10 @@ function PlayerRow({
           {player.relationship !== 'OTHER' ? <Badge>{titleCase(player.relationship)}</Badge> : null}
         </p>
         <p className="mt-0.5 text-xs text-ink-muted">
-          {player.matchesPlayed} match{player.matchesPlayed === 1 ? '' : 'es'}
-          {player.lastPlayedAt ? ` · last ${formatShortDate(player.lastPlayedAt)}` : ''}
-          {player.matchesPlayed > 0 ? ` · rating ${Math.round(player.rating)}` : ''}
+          <span className="tabular">
+            {player.matchesPlayed} match{player.matchesPlayed === 1 ? '' : 'es'}
+          </span>
+          {player.lastPlayedAt ? ` · last played ${formatShortDate(player.lastPlayedAt)}` : ''}
         </p>
         {error ? (
           <p role="alert" className="mt-1 text-xs text-loss">
@@ -148,21 +147,47 @@ function PlayerRow({
         ) : null}
       </div>
 
-      <div className="flex shrink-0 gap-1">
+      {player.matchesPlayed > 0 ? (
+        <div className="hidden text-right sm:block">
+          <p className="eyebrow">Rating</p>
+          <p className="tabular text-sm font-semibold text-ink">{Math.round(player.rating)}</p>
+        </div>
+      ) : null}
+
+      <div className="flex shrink-0 items-center gap-0.5">
         {player.matchesPlayed > 0 ? (
           <Link
             href={`/matches?opponentId=${player.id}`}
-            className="rounded px-2.5 py-1.5 text-xs text-accent hover:bg-surface-sunken"
+            title="View matches"
+            className="flex size-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-ink/[0.05] hover:text-ink"
           >
-            Matches
+            <ListOrdered className="size-4" aria-hidden="true" />
+            <span className="sr-only">Matches with {player.name}</span>
           </Link>
         ) : null}
-        <Button variant="ghost" size="sm" onClick={onMerge}>
-          Merge
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => void remove()} loading={isPending}>
-          Delete
-        </Button>
+        <button
+          type="button"
+          onClick={onMerge}
+          title="Merge into another player"
+          className="flex size-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-ink/[0.05] hover:text-ink"
+        >
+          <Merge className="size-4" aria-hidden="true" />
+          <span className="sr-only">Merge {player.name}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => void remove()}
+          disabled={isPending}
+          title="Delete"
+          className="flex size-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-loss-soft hover:text-loss disabled:opacity-50"
+        >
+          {isPending ? (
+            <Spinner className="size-3.5" />
+          ) : (
+            <Trash2 className="size-4" aria-hidden="true" />
+          )}
+          <span className="sr-only">Delete {player.name}</span>
+        </button>
       </div>
     </div>
   );
@@ -189,7 +214,7 @@ function MergePanel({
   const candidates = players.filter((player) => player.id !== source.id && !player.isSelf);
 
   return (
-    <Card className="card-pad mb-4 border-accent">
+    <Card className="card-pad mb-4 border-accent-text/40">
       <h2 className="text-sm font-semibold text-ink">Merge {source.name} into another player</h2>
       <p className="mt-1 text-sm text-ink-secondary">
         Every one of {source.name}&rsquo;s {source.matchesPlayed} appearances moves to the player

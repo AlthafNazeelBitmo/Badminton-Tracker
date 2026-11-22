@@ -1,5 +1,6 @@
 'use client';
 
+import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import {
@@ -113,7 +114,7 @@ export default function VenuesPage() {
         <Card>
           <EmptyState
             title="No venue data yet"
-            icon="📍"
+            icon={<MapPin />}
             description="Record a match with a venue and its performance breakdown appears here."
           />
         </Card>

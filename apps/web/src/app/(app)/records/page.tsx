@@ -1,5 +1,6 @@
 'use client';
 
+import { Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useAchievements, useFilterState, useRecords } from '@/lib/hooks';
 import { formatShortDate } from '@/lib/format';
@@ -52,7 +53,7 @@ export default function RecordsPage() {
         <Card>
           <EmptyState
             title="No records yet"
-            icon="🏆"
+            icon={<Trophy />}
             description="Records appear as soon as there are matches to draw them from."
           />
         </Card>
@@ -75,7 +76,7 @@ export default function RecordsPage() {
                   {record.matchId ? (
                     <Link
                       href={`/matches/${record.matchId}`}
-                      className="text-accent hover:underline"
+                      className="text-accent-text hover:underline"
                     >
                       View match
                     </Link>
@@ -108,7 +109,7 @@ export default function RecordsPage() {
                   {unlocked.map((entry) => (
                     <li
                       key={entry.code}
-                      className="flex flex-col items-center gap-1 rounded border border-line p-3 text-center"
+                      className="flex flex-col items-center gap-1 rounded-lg border border-line p-3 text-center"
                     >
                       <span aria-hidden="true" className="text-2xl">
                         {entry.icon}

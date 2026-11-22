@@ -10,6 +10,8 @@ import { RankedBars } from '@/components/charts';
 import {
   Card,
   CardHeader,
+  Segmented,
+  selectClasses,
   EmptyState,
   ErrorState,
   PageHeader,
@@ -50,36 +52,22 @@ export default function OpponentsPage() {
       <FilterBar filter={filter} onChange={update} className="mb-4" />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" aria-label="View" className="flex gap-1">
-          {(
-            [
-              ['opponents', 'Opponents'],
-              ['partners', 'Partners'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              role="tab"
-              aria-selected={tab === value}
-              onClick={() => setTab(value)}
-              className={cx(
-                'rounded-sm border px-3 py-1.5 text-xs font-medium transition-colors',
-                tab === value
-                  ? 'border-accent bg-accent-soft text-accent'
-                  : 'border-line text-ink-secondary hover:border-line-strong',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="View"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'opponents', label: 'Opponents' },
+            { value: 'partners', label: 'Partners' },
+          ]}
+        />
 
         <label className="flex items-center gap-2 text-xs text-ink-secondary">
           Minimum matches
           <select
             value={minMatches}
             onChange={(event) => setMinMatches(Number(event.target.value))}
-            className="h-9 rounded border border-line bg-surface-raised px-2 text-xs"
+            className={cx(selectClasses, 'h-9 w-20 text-xs')}
           >
             {[1, 3, 5, 10].map((value) => (
               <option key={value} value={value}>
@@ -116,6 +104,7 @@ export default function OpponentsPage() {
             />
             <div className="p-4 sm:p-5">
               <RankedBars
+                avatars
                 valueLabel="win rate"
                 data={[...entries]
                   .sort((a, b) => (b.stats.winRate ?? -1) - (a.stats.winRate ?? -1))
@@ -154,7 +143,7 @@ export default function OpponentsPage() {
                   name: (
                     <Link
                       href={`/matches?${tab === 'opponents' ? 'opponentId' : 'partnerId'}=${entry.subject.id}`}
-                      className="text-accent hover:underline"
+                      className="text-accent-text hover:underline"
                     >
                       {entry.subject.name}
                     </Link>

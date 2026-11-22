@@ -2,12 +2,12 @@
 
 import { useId, type ReactNode } from 'react';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -15,7 +15,7 @@ import {
   YAxis,
 } from 'recharts';
 import { EM_DASH, percent, signed } from '@/lib/format';
-import { cx } from './ui';
+import { Avatar, cx } from './ui';
 
 /**
  * Chart kit.
@@ -54,10 +54,12 @@ export function ChartFrame({
 }) {
   return (
     <figure className="card overflow-hidden">
-      <figcaption className="flex flex-wrap items-start justify-between gap-2 border-b border-line px-4 py-3 sm:px-5">
+      <figcaption className="flex flex-wrap items-start justify-between gap-2 px-4 pb-1 pt-4 sm:px-5">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-ink">{title}</h3>
-          {description ? <p className="mt-0.5 text-xs text-ink-muted">{description}</p> : null}
+          <h3 className="text-sm font-semibold tracking-tight text-ink">{title}</h3>
+          {description ? (
+            <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{description}</p>
+          ) : null}
         </div>
         {legend}
       </figcaption>
@@ -65,7 +67,7 @@ export function ChartFrame({
         {children}
       </div>
       {footer ? (
-        <div className="border-t border-line px-4 py-2.5 text-xs text-ink-secondary sm:px-5">
+        <div className="mx-4 border-t border-dashed border-line py-3 text-xs text-ink-muted sm:mx-5">
           {footer}
         </div>
       ) : null}
@@ -81,7 +83,7 @@ export function Legend({ items }: { items: Array<{ label: string; color: string 
         <li key={item.label} className="flex items-center gap-1.5 text-xs text-ink-secondary">
           <span
             aria-hidden="true"
-            className="h-2.5 w-2.5 rounded-sm"
+            className="h-2 w-2 rounded-full"
             style={{ backgroundColor: item.color }}
           />
           {item.label}
@@ -93,9 +95,21 @@ export function Legend({ items }: { items: Array<{ label: string; color: string 
 
 function TooltipShell({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded border border-line bg-surface-raised px-3 py-2 text-xs shadow-pop">
+    <div className="rounded-lg border border-line bg-surface-overlay px-3 py-2 text-xs shadow-pop">
       {children}
     </div>
+  );
+}
+
+/** The soft fill under an area chart: the series colour fading to nothing. */
+function AreaGradient({ id }: { id: string }) {
+  return (
+    <defs>
+      <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="var(--series-1)" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="var(--series-1)" stopOpacity={0} />
+      </linearGradient>
+    </defs>
   );
 }
 
@@ -121,12 +135,14 @@ export interface TrendDatum {
 export function WinRateTrend({ data, height = 240 }: { data: TrendDatum[]; height?: number }) {
   // Periods where the rate is unknown are dropped rather than plotted as 0%.
   const points = data.filter((point) => point.winRate !== null);
+  const gradientId = useId().replace(/[^a-zA-Z0-9]/g, '');
 
   if (points.length === 0) return <ChartEmpty />;
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={points} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
+      <AreaChart data={points} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
+        <AreaGradient id={gradientId} />
         <CartesianGrid {...GRID_STYLE} vertical={false} />
         <XAxis
           dataKey="label"
@@ -163,16 +179,17 @@ export function WinRateTrend({ data, height = 240 }: { data: TrendDatum[]; heigh
             );
           }}
         />
-        <Line
+        <Area
           type="monotone"
           dataKey="winRate"
-          stroke="var(--accent)"
-          strokeWidth={2}
-          dot={{ r: 3, fill: 'var(--accent)', strokeWidth: 0 }}
-          activeDot={{ r: 5, stroke: 'var(--surface-2)', strokeWidth: 2 }}
+          stroke="var(--series-1)"
+          strokeWidth={2.25}
+          fill={`url(#${gradientId})`}
+          dot={{ r: 3, fill: 'var(--surface-2)', stroke: 'var(--series-1)', strokeWidth: 2 }}
+          activeDot={{ r: 5, fill: 'var(--series-1)', stroke: 'var(--surface-2)', strokeWidth: 2 }}
           isAnimationActive={false}
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }
@@ -205,7 +222,7 @@ export function DifferentialBars({
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={40} />
         <ReferenceLine y={0} stroke="var(--axis)" />
         <Tooltip
-          cursor={{ fill: 'var(--surface-0)' }}
+          cursor={{ fill: 'var(--grid)', opacity: 0.6 }}
           content={({ active, payload }) => {
             const point = payload?.[0]?.payload as { label: string; value: number } | undefined;
             if (!active || !point) return null;
@@ -240,34 +257,47 @@ export function RankedBars({
   valueLabel,
   max = 100,
   formatValue = (value: number) => percent(value),
+  avatars = false,
 }: {
   data: Array<{ label: string; value: number | null; detail?: string }>;
   valueLabel: string;
   max?: number;
   formatValue?: (value: number) => string;
+  /** Show each row's label as a person, with their avatar. */
+  avatars?: boolean;
 }) {
   if (data.length === 0) return <ChartEmpty />;
 
   return (
-    <ul className="space-y-2.5">
+    <ul className="space-y-4">
       {data.map((row) => {
         const width = row.value === null ? 0 : Math.min(100, (row.value / max) * 100);
         return (
-          <li key={row.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
+          <li
+            key={row.label}
+            className={cx(
+              'grid items-center gap-x-3',
+              avatars ? 'grid-cols-[auto_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]',
+            )}
+          >
+            {avatars ? <Avatar name={row.label} size="md" /> : null}
             <div className="min-w-0">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-sm text-ink">{row.label}</span>
+                <span className="truncate text-sm font-medium text-ink">{row.label}</span>
                 {/* Direct label: the number is always visible, never hover-only. */}
                 <span className="tabular shrink-0 text-sm font-medium text-ink">
                   {row.value === null ? EM_DASH : formatValue(row.value)}
                 </span>
               </div>
               <div
-                className="mt-1 h-2 w-full overflow-hidden rounded-sm bg-surface-sunken"
+                className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken"
                 role="img"
                 aria-label={`${row.label}: ${row.value === null ? 'no data' : formatValue(row.value)} ${valueLabel}`}
               >
-                <div className="h-full rounded-sm bg-accent" style={{ width: `${width}%` }} />
+                <div
+                  className="h-full rounded-full bg-[var(--diverge-positive)]"
+                  style={{ width: `${width}%` }}
+                />
               </div>
               {row.detail ? <p className="mt-0.5 text-xs text-ink-muted">{row.detail}</p> : null}
             </div>
@@ -306,7 +336,7 @@ export function WonLostBars({
         />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} />
         <Tooltip
-          cursor={{ fill: 'var(--surface-0)' }}
+          cursor={{ fill: 'var(--grid)', opacity: 0.6 }}
           content={({ active, payload }) => {
             const point = payload?.[0]?.payload as
               { label: string; won: number; lost: number } | undefined;
@@ -355,13 +385,15 @@ export function RatingTrend({
   data: Array<{ playedAt: string; rating: number; result: string }>;
   height?: number;
 }) {
+  const gradientId = useId().replace(/[^a-zA-Z0-9]/g, '');
   if (data.length < 2) {
     return <ChartEmpty message="A rating history appears once you have recorded a few matches." />;
   }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
+        <AreaGradient id={gradientId} />
         <CartesianGrid {...GRID_STYLE} vertical={false} />
         <XAxis
           dataKey="playedAt"
@@ -395,16 +427,17 @@ export function RatingTrend({
             );
           }}
         />
-        <Line
+        <Area
           type="monotone"
           dataKey="rating"
-          stroke="var(--accent)"
-          strokeWidth={2}
+          stroke="var(--series-1)"
+          strokeWidth={2.25}
+          fill={`url(#${gradientId})`}
           dot={false}
-          activeDot={{ r: 5, stroke: 'var(--surface-2)', strokeWidth: 2 }}
+          activeDot={{ r: 5, fill: 'var(--series-1)', stroke: 'var(--surface-2)', strokeWidth: 2 }}
           isAnimationActive={false}
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }
@@ -514,9 +547,9 @@ export function SessionPositionBars({
       {buckets.map((bucket) => (
         <li key={bucket.matchNumber} className="flex items-center gap-3">
           <span className="w-16 shrink-0 text-xs text-ink-muted">Match {bucket.matchNumber}</span>
-          <div className="h-6 flex-1 overflow-hidden rounded-sm bg-surface-sunken">
+          <div className="h-6 flex-1 overflow-hidden rounded-full bg-surface-sunken">
             <div
-              className="flex h-full items-center justify-end rounded-sm bg-accent px-2"
+              className="flex h-full items-center justify-end rounded-full bg-[var(--diverge-positive)] px-2"
               style={{ width: `${bucket.winRate ?? 0}%` }}
             />
           </div>
@@ -541,7 +574,7 @@ export function ChartTableToggle({
       type="button"
       onClick={onToggle}
       className={cx(
-        'rounded-sm border border-line px-2 py-1 text-xs text-ink-secondary',
+        'rounded-lg border border-line px-2 py-1 text-xs text-ink-secondary',
         'hover:border-line-strong',
       )}
       aria-pressed={showTable}

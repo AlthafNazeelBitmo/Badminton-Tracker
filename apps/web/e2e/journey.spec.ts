@@ -49,9 +49,9 @@ test.describe('new user journey', () => {
 
     // --- And in the analytics --------------------------------------------
     await page.goto('/');
-    const winRateTile = page.locator('.card', { hasText: 'Win rate' }).first();
-    await expect(winRateTile).toContainText('100.0%');
-    await expect(winRateTile).toContainText('1W');
+    const headline = page.locator('.card', { hasText: 'Win rate' }).first();
+    await expect(headline).toContainText('100%');
+    await expect(headline).toContainText('1–0');
   });
 
   test('rejects an impossible score before saving', async ({ page }) => {

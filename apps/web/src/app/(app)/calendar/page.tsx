@@ -1,5 +1,6 @@
 'use client';
 
+import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { SESSION_TYPE_LABELS } from '@badminton/contracts';
@@ -66,6 +67,7 @@ export default function CalendarPage() {
     return map;
   }, [sessions.data]);
 
+  const todayIso = new Date().toISOString().slice(0, 10);
   const grid = useMemo(() => buildMonthGrid(month.year, month.month), [month]);
 
   const shift = (delta: number) => {
@@ -94,7 +96,7 @@ export default function CalendarPage() {
             type="button"
             onClick={() => shift(-1)}
             aria-label="Previous month"
-            className="rounded px-3 py-1.5 text-sm text-ink-secondary hover:bg-surface-sunken"
+            className="rounded px-3 py-1.5 text-sm text-ink-secondary hover:bg-ink/[0.04]"
           >
             ←
           </button>
@@ -103,7 +105,7 @@ export default function CalendarPage() {
             type="button"
             onClick={() => shift(1)}
             aria-label="Next month"
-            className="rounded px-3 py-1.5 text-sm text-ink-secondary hover:bg-surface-sunken"
+            className="rounded px-3 py-1.5 text-sm text-ink-secondary hover:bg-ink/[0.04]"
           >
             →
           </button>
@@ -123,7 +125,7 @@ export default function CalendarPage() {
 
             <div className="mt-1 grid grid-cols-7 gap-1">
               {grid.map((cell, index) => {
-                if (!cell) return <div key={`blank-${index}`} className="aspect-square" />;
+                if (!cell) return <div key={`blank-${index}`} className="h-16 sm:h-24" />;
 
                 const daySessions = byDate.get(cell) ?? [];
                 const matches = daySessions.reduce(
@@ -142,20 +144,53 @@ export default function CalendarPage() {
                     aria-pressed={isSelected}
                     aria-label={`${formatDate(cell)}${hasPlay ? `, ${matches} matches, ${wins} won` : ', no matches'}`}
                     className={cx(
-                      'flex aspect-square flex-col items-center justify-center rounded border p-1 transition-colors',
+                      'group relative flex h-16 flex-col items-start justify-between rounded-xl border p-2 text-left transition-all duration-150 sm:h-24 sm:p-2.5',
                       isSelected
-                        ? 'border-accent bg-accent-soft'
+                        ? 'border-ink bg-ink text-[var(--surface-2)] shadow-lift'
                         : hasPlay
-                          ? 'border-line bg-surface-sunken hover:border-accent'
+                          ? wins * 2 >= matches
+                            ? 'border-win/20 bg-win-soft hover:-translate-y-px hover:shadow-lift'
+                            : 'border-loss/20 bg-loss-soft hover:-translate-y-px hover:shadow-lift'
                           : 'border-transparent text-ink-muted hover:border-line',
                     )}
                   >
-                    <span className={cx('text-xs', hasPlay ? 'font-medium text-ink' : '')}>
+                    <span
+                      className={cx(
+                        'tabular text-xs sm:text-[13px]',
+                        hasPlay || isSelected ? 'font-semibold' : '',
+                        cell === todayIso
+                          ? 'flex size-6 items-center justify-center rounded-full bg-accent text-accent-ink'
+                          : '',
+                      )}
+                    >
                       {Number(cell.slice(8, 10))}
                     </span>
                     {hasPlay ? (
-                      <span className="mt-0.5 text-[10px] text-ink-secondary">
-                        {wins}/{matches}
+                      <span className="w-full">
+                        <span
+                          className={cx(
+                            'tabular hidden text-[11px] font-medium sm:block',
+                            isSelected
+                              ? 'opacity-70'
+                              : wins * 2 >= matches
+                                ? 'text-win'
+                                : 'text-loss',
+                          )}
+                        >
+                          {wins}–{matches - wins}
+                        </span>
+                        <span className="mt-1 flex gap-0.5" aria-hidden="true">
+                          {Array.from({ length: Math.min(matches, 8) }).map((_, dot) => (
+                            <span
+                              key={dot}
+                              className={cx(
+                                'size-1.5 rounded-full',
+                                dot < wins ? 'bg-win' : 'bg-loss/60',
+                                isSelected && 'opacity-80',
+                              )}
+                            />
+                          ))}
+                        </span>
                       </span>
                     ) : null}
                   </button>
@@ -179,7 +214,7 @@ export default function CalendarPage() {
           />
 
           {(byDate.get(selected) ?? []).length === 0 ? (
-            <EmptyState title="Nothing recorded on this day" icon="🗓️" />
+            <EmptyState title="Nothing recorded on this day" icon={<CalendarDays />} />
           ) : (
             <>
               <ul className="divide-y divide-line">
@@ -217,7 +252,7 @@ export default function CalendarPage() {
                     <li key={match.id}>
                       <Link
                         href={`/matches/${match.id}`}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-sunken sm:px-5"
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-ink/[0.04] sm:px-5"
                       >
                         <ResultBadge result={match.derived.result} />
                         <span className="min-w-0 flex-1 truncate text-sm text-ink">

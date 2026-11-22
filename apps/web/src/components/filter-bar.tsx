@@ -10,7 +10,8 @@ import {
 } from '@badminton/contracts';
 import type { FilterState } from '@/lib/hooks';
 import { useVenues } from '@/lib/hooks';
-import { cx } from './ui';
+import { SlidersHorizontal } from 'lucide-react';
+import { Segmented, cx, selectClasses } from './ui';
 
 /**
  * The global analytics filter.
@@ -48,44 +49,32 @@ export function FilterBar({
   ).length;
 
   return (
-    <div className={cx('card', className)}>
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-        <div
-          role="group"
-          aria-label="Date range"
-          className="-mx-1 flex flex-1 gap-1 overflow-x-auto px-1"
-        >
-          {PRESETS.map((preset) => {
-            const active = filter.preset === preset.value;
-            return (
-              <button
-                key={preset.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onChange({ preset: preset.value, from: undefined, to: undefined })}
-                className={cx(
-                  'shrink-0 rounded-sm border px-3 py-1.5 text-xs font-medium transition-colors',
-                  active
-                    ? 'border-accent bg-accent-soft text-accent'
-                    : 'border-line text-ink-secondary hover:border-line-strong',
-                )}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-        </div>
+    <div className={cx('space-y-3', className)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Segmented
+          label="Date range"
+          options={PRESETS}
+          value={filter.preset}
+          onChange={(preset) => onChange({ preset, from: undefined, to: undefined })}
+          className="min-w-0"
+        />
 
         {showDimensions ? (
           <button
             type="button"
             onClick={() => setExpanded((open) => !open)}
             aria-expanded={expanded}
-            className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-xs text-ink-secondary hover:border-line-strong"
+            className={cx(
+              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium shadow-card transition-colors',
+              expanded || activeDimensions > 0
+                ? 'border-line-strong bg-surface-raised text-ink'
+                : 'border-line bg-surface-raised text-ink-secondary hover:border-line-strong hover:text-ink',
+            )}
           >
+            <SlidersHorizontal className="size-3.5" aria-hidden="true" />
             Filters
             {activeDimensions > 0 ? (
-              <span className="ml-1.5 rounded-sm bg-accent px-1.5 text-accent-ink">
+              <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-accent-ink">
                 {activeDimensions}
               </span>
             ) : null}
@@ -94,7 +83,7 @@ export function FilterBar({
       </div>
 
       {showDimensions && expanded ? (
-        <div className="grid gap-3 border-t border-line px-3 py-3 sm:grid-cols-3">
+        <div className="card animate-in grid gap-3 p-4 sm:grid-cols-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-ink-secondary">Discipline</span>
             <select
@@ -104,7 +93,7 @@ export function FilterBar({
                   discipline: (event.target.value || undefined) as FilterState['discipline'],
                 })
               }
-              className="h-10 w-full rounded border border-line bg-surface-raised px-2 text-sm"
+              className={cx(selectClasses, 'h-10')}
             >
               <option value="">All</option>
               {DISCIPLINES.map((value) => (
@@ -124,7 +113,7 @@ export function FilterBar({
                   sessionType: (event.target.value || undefined) as FilterState['sessionType'],
                 })
               }
-              className="h-10 w-full rounded border border-line bg-surface-raised px-2 text-sm"
+              className={cx(selectClasses, 'h-10')}
             >
               <option value="">All</option>
               {SESSION_TYPES.map((value) => (
@@ -140,7 +129,7 @@ export function FilterBar({
             <select
               value={filter.venueId ?? ''}
               onChange={(event) => onChange({ venueId: event.target.value || undefined })}
-              className="h-10 w-full rounded border border-line bg-surface-raised px-2 text-sm"
+              className={cx(selectClasses, 'h-10')}
             >
               <option value="">All</option>
               {(venues?.items ?? []).map((venue) => (
@@ -157,7 +146,7 @@ export function FilterBar({
               onClick={() =>
                 onChange({ discipline: undefined, sessionType: undefined, venueId: undefined })
               }
-              className="justify-self-start text-xs text-accent hover:underline sm:col-span-3"
+              className="link justify-self-start text-xs sm:col-span-3"
             >
               Clear filters
             </button>

@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { Fragment, useRef } from 'react';
+import { Plus, X } from 'lucide-react';
 import { gamesRequiredToWin, validateGameScore, type ScoringRules } from '@badminton/contracts';
-import { Button, cx } from './ui';
+import { Button, ResultBadge, cx } from './ui';
 
 export interface GameInput {
   myScore: string;
@@ -60,16 +61,33 @@ export function ScoreEntry({
   const addGame = () => onChange([...games, { myScore: '', opponentScore: '' }]);
   const removeGame = (index: number) => onChange(games.filter((_, position) => position !== index));
 
+  const tile = (invalid: boolean, leading: boolean) =>
+    cx(
+      'tabular h-16 w-full rounded-xl border bg-surface-raised text-center text-[32px] font-semibold tracking-[-0.03em] text-ink shadow-card',
+      'transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-ink-muted/40',
+      'focus:border-accent-text/60 focus:shadow-ring focus:outline-none focus-visible:outline-none',
+      invalid
+        ? 'border-loss bg-loss-soft'
+        : leading
+          ? 'border-win/40 bg-win-soft'
+          : 'border-line hover:border-line-strong',
+    );
+
   return (
     <div>
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-sm font-medium text-ink">Scores</span>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-semibold tracking-tight text-ink">Scores</span>
         <span className="text-xs text-ink-muted">
-          You <span aria-hidden="true">·</span> Them
+          Best of {scoring.bestOf} to {scoring.pointsToWin}
         </span>
       </div>
 
-      <ol className="space-y-2">
+      <div className="grid grid-cols-[3.5rem_minmax(0,7rem)_minmax(0,7rem)_auto] items-center gap-x-2 gap-y-2.5 sm:gap-x-3">
+        <span />
+        <span className="eyebrow text-center">You</span>
+        <span className="eyebrow text-center">Them</span>
+        <span />
+
         {games.map((game, index) => {
           const filled = game.myScore !== '' && game.opponentScore !== '';
           const check = filled
@@ -82,8 +100,8 @@ export function ScoreEntry({
           const won = filled && Number(game.myScore) > Number(game.opponentScore);
 
           return (
-            <li key={index} className="flex items-center gap-2">
-              <span className="w-14 shrink-0 text-xs text-ink-muted">Game {index + 1}</span>
+            <Fragment key={index}>
+              <span className="text-xs font-medium text-ink-muted">Game {index + 1}</span>
 
               <input
                 ref={(element) => {
@@ -92,19 +110,13 @@ export function ScoreEntry({
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
+                placeholder="0"
                 aria-label={`Game ${index + 1}, your score`}
                 aria-invalid={invalid}
                 value={game.myScore}
                 onChange={(event) => setValue(index, 'myScore', event.target.value)}
-                className={cx(
-                  'h-14 w-full rounded border bg-surface-raised text-center text-xl font-semibold tabular',
-                  invalid ? 'border-loss' : 'border-line focus:border-accent',
-                )}
+                className={tile(invalid, filled && !invalid && won)}
               />
-
-              <span aria-hidden="true" className="text-ink-muted">
-                –
-              </span>
 
               <input
                 ref={(element) => {
@@ -113,61 +125,63 @@ export function ScoreEntry({
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
+                placeholder="0"
                 aria-label={`Game ${index + 1}, their score`}
                 aria-invalid={invalid}
                 value={game.opponentScore}
                 onChange={(event) => setValue(index, 'opponentScore', event.target.value)}
-                className={cx(
-                  'h-14 w-full rounded border bg-surface-raised text-center text-xl font-semibold tabular',
-                  invalid ? 'border-loss' : 'border-line focus:border-accent',
-                )}
+                className={tile(invalid, filled && !invalid && !won)}
               />
 
-              <span className="w-6 shrink-0 text-center text-sm">
+              <span className="flex items-center gap-1">
                 {filled && !invalid ? (
-                  <span className={won ? 'text-win' : 'text-loss'} title={won ? 'Won' : 'Lost'}>
-                    <span aria-hidden="true">{won ? 'W' : 'L'}</span>
-                    <span className="sr-only">{won ? 'Game won' : 'Game lost'}</span>
-                  </span>
+                  <ResultBadge result={won ? 'WIN' : 'LOSS'} size="sm" />
+                ) : invalid ? (
+                  <span className="text-[11px] font-medium text-loss">Check</span>
+                ) : (
+                  <span className="size-6" />
+                )}
+                {games.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeGame(index)}
+                    aria-label={`Remove game ${index + 1}`}
+                    className="flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-loss-soft hover:text-loss"
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </button>
                 ) : null}
               </span>
-
-              {games.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => removeGame(index)}
-                  aria-label={`Remove game ${index + 1}`}
-                  className="w-6 shrink-0 text-ink-muted hover:text-loss"
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
-              ) : null}
-            </li>
+            </Fragment>
           );
         })}
-      </ol>
+      </div>
 
       {games.length < scoring.bestOf && !decided ? (
-        <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={addGame}>
-          + Add game {games.length + 1}
+        <Button type="button" size="sm" variant="ghost" className="mt-3" onClick={addGame}>
+          <Plus /> Add game {games.length + 1}
         </Button>
       ) : null}
 
       {completed.length > 0 ? (
-        <p className="mt-3 text-sm text-ink-secondary">
-          {decided ? (
-            <>
-              <strong className={myGames > theirGames ? 'text-win' : 'text-loss'}>
-                {myGames > theirGames ? 'Win' : 'Loss'}
-              </strong>{' '}
-              {myGames}–{theirGames} in games
-            </>
-          ) : (
-            <>
-              {myGames}–{theirGames} in games, first to {needed}
-            </>
+        <div
+          aria-live="polite"
+          className={cx(
+            'mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm',
+            decided
+              ? myGames > theirGames
+                ? 'bg-win-soft text-win'
+                : 'bg-loss-soft text-loss'
+              : 'bg-surface-sunken text-ink-secondary',
           )}
-        </p>
+        >
+          <span className="font-semibold">
+            {decided ? (myGames > theirGames ? 'Win' : 'Loss') : 'In progress'}
+          </span>{' '}
+          <span className="tabular font-medium">
+            {myGames}–{theirGames} in games{decided ? '' : `, first to ${needed}`}
+          </span>
+        </div>
       ) : null}
     </div>
   );
